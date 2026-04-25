@@ -70,7 +70,10 @@ exports.sendSignupPasscode = async (req, res) => {
       });
     }
 
-    return res.status(500).json({ success: false, message: 'Failed to send code. Please try again.' });
+    return res.status(500).json({ 
+      success: false, 
+      message: `Failed to send code: ${err.message || 'Unknown error'}. Check Render logs.`
+    });
   }
 };
 
