@@ -55,41 +55,30 @@ const useAuthStore = create(
       },
 
       /* ── Sign out ── */
-       logout: async () => {
+      logout: async () => {
         try { await apiClient.post('/auth/logout'); } catch { /* ignore */ }
         set({ currentUser: null, accessToken: null });
         i18n.changeLanguage('en');
       },
 
-      /* ── Refresh user from server ── */
+      /* ── Refresh user from server on app mount ── */
       refreshUser: async () => {
-        const { accessToken } = get();
-        if (!accessToken) {
-          // Try to read from localStorage directly for hydration cases
-          try {
-            const raw = localStorage.getItem('cb-auth');
-            if (raw) {
-              const { state } = JSON.parse(raw);
-              if (state?.accessToken) {
-                set({ accessToken: state.accessToken });
-              } else {
-                return;
-              }
-            } else {
-              return;
-            }
-          } catch {
-            return;
-          }
-        }
+        // Don't attempt if no token stored
+        if (!get().accessToken) return;
+
         try {
           const { data } = await apiClient.get('/auth/me');
           set({ currentUser: data.user });
           if (data.user?.languagePreference) {
             i18n.changeLanguage(data.user.languagePreference);
           }
-        } catch {
-          set({ currentUser: null, accessToken: null });
+        } catch (err) {
+          // Only wipe auth on a real 401 (invalid/expired token)
+          // Do NOT wipe on network errors (500, timeout, Render cold start)
+          if (err.response?.status === 401) {
+            set({ currentUser: null, accessToken: null });
+          }
+          // Otherwise keep the stored token — user stays logged in
         }
       },
 
