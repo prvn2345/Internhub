@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -17,7 +17,7 @@ const AdminJobs = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15 });
@@ -29,14 +29,14 @@ const AdminJobs = () => {
       setTotal(data.total);
     } catch (_) {}
     setLoading(false);
-  };
+  }, [page, statusFilter, search]);
 
-  useEffect(() => { fetchJobs(); }, [page, statusFilter]);
+  useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   const handleStatusChange = async (jobId, status) => {
     try {
       await api.put(`/admin/jobs/${jobId}/status`, { status });
-      setJobs(jobs.map((j) => j._id === jobId ? { ...j, status } : j));
+      setJobs((prev) => prev.map((j) => j._id === jobId ? { ...j, status } : j));
       toast.success('Job status updated');
     } catch (_) { toast.error('Failed to update'); }
   };

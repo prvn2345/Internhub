@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -16,7 +16,7 @@ const AdminUsers = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15 });
@@ -28,9 +28,9 @@ const AdminUsers = () => {
       setTotal(data.total);
     } catch (_) {}
     setLoading(false);
-  };
+  }, [page, roleFilter, search]);
 
-  useEffect(() => { fetchUsers(); }, [page, roleFilter]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleSearch = (e) => {
     e.preventDefault();

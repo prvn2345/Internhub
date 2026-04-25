@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
@@ -36,7 +35,7 @@ const EditJobPage = () => {
       setLoading(false);
     };
     fetch();
-  }, [id]);
+  }, [id, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 

@@ -35,7 +35,7 @@ const JobDetailPage = () => {
       setLoading(false);
     };
     fetchJob();
-  }, [id]);
+  }, [id, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     if (!token) { toast.error('Please login to save jobs'); return; }
