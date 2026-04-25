@@ -16,8 +16,10 @@ apiClient.interceptors.request.use((config) => {
     const raw = localStorage.getItem('cb-auth');
     if (raw) {
       const { state } = JSON.parse(raw);
-      if (state?.token) {
-        config.headers.Authorization = `Bearer ${state.token}`;
+      // Zustand persists it as 'accessToken' 
+      const token = state?.accessToken;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     }
   } catch {
@@ -31,8 +33,12 @@ apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('cb-auth');
-      window.location.href = '/login';
+      // Only clear and redirect if it's NOT the /auth/me refresh call
+      const url = err.config?.url || '';
+      if (!url.includes('/auth/me')) {
+        localStorage.removeItem('cb-auth');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }

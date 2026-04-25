@@ -55,7 +55,7 @@ const useAuthStore = create(
       },
 
       /* ── Sign out ── */
-      logout: async () => {
+       logout: async () => {
         try { await apiClient.post('/auth/logout'); } catch { /* ignore */ }
         set({ currentUser: null, accessToken: null });
         i18n.changeLanguage('en');
@@ -63,6 +63,25 @@ const useAuthStore = create(
 
       /* ── Refresh user from server ── */
       refreshUser: async () => {
+        const { accessToken } = get();
+        if (!accessToken) {
+          // Try to read from localStorage directly for hydration cases
+          try {
+            const raw = localStorage.getItem('cb-auth');
+            if (raw) {
+              const { state } = JSON.parse(raw);
+              if (state?.accessToken) {
+                set({ accessToken: state.accessToken });
+              } else {
+                return;
+              }
+            } else {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
         try {
           const { data } = await apiClient.get('/auth/me');
           set({ currentUser: data.user });
