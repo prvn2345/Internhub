@@ -32,7 +32,7 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: CLIENT_URL
-        sync: false          # set to your frontend URL after deploy
+        value: https://careerbridge-frontend.vercel.app
 
   # ── Frontend Static Site ─────────────────────────────
   - type: web
