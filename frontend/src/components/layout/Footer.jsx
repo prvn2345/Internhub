@@ -12,9 +12,9 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">IH</span>
+                <span className="text-white font-bold text-sm">CB</span>
               </div>
-              <span className="font-bold text-xl text-white">InternHub</span>
+              <span className="font-bold text-xl text-white">CareerBridge</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
               Connecting students and professionals with top companies worldwide. Find your dream internship or job today.
@@ -41,7 +41,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} InternHub. All rights reserved.
+            © {new Date().getFullYear()} CareerBridge. All rights reserved.
           </p>
           <div className="flex gap-4 text-sm text-gray-500">
             <span>Privacy Policy</span>

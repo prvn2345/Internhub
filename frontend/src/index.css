@@ -1,42 +1,84 @@
+/* CareerBridge — Global Stylesheet */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base layer ─────────────────────────────────────── */
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans;
+    @apply bg-slate-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
 }
 
+/* ── Reusable component classes ─────────────────────── */
 @layer components {
-  .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+
+  /* Buttons */
+  .cb-btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800
+           text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg border border-gray-300 transition-colors duration-200;
+
+  .cb-btn-secondary {
+    @apply bg-white hover:bg-gray-50 active:bg-gray-100
+           text-gray-700 font-medium px-4 py-2 rounded-lg
+           border border-gray-300 transition-colors duration-200
+           dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600
+           dark:hover:bg-gray-700;
   }
-  .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200;
+
+  .cb-btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium
+           px-4 py-2 rounded-lg transition-colors duration-200;
   }
-  .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors;
+
+  /* Aliases used throughout the app */
+  .btn-primary   { @apply cb-btn-primary; }
+  .btn-secondary { @apply cb-btn-secondary; }
+  .btn-danger    { @apply cb-btn-danger; }
+
+  /* Form inputs */
+  .cb-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-primary-500
+           focus:border-transparent
+           dark:bg-gray-800 dark:border-gray-600 dark:text-white
+           transition-colors;
   }
-  .card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+
+  /* Alias */
+  .input-field { @apply cb-input; }
+
+  /* Card surface */
+  .cb-card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm
+           border border-gray-200 dark:border-gray-700;
   }
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+
+  /* Alias */
+  .card { @apply cb-card; }
+
+  /* Status / label badges */
+  .cb-badge {
+    @apply inline-flex items-center px-2.5 py-0.5
+           rounded-full text-xs font-medium;
   }
+
+  /* Alias */
+  .badge { @apply cb-badge; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-gray-100 dark:bg-gray-800;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-400 dark:bg-gray-600 rounded-full;
-}
+/* ── Scrollbar styling ──────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { @apply bg-gray-100 dark:bg-gray-800; }
+::-webkit-scrollbar-thumb  { @apply bg-gray-400 dark:bg-gray-600 rounded-full; }

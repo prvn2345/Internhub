@@ -186,7 +186,7 @@ const RegisterPage = () => {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">IH</span>
+            <span className="text-white font-bold text-lg">CB</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth.register')}</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
@@ -378,7 +378,7 @@ const RegisterPage = () => {
                 Account Created!
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Welcome to InternHub, {form.name.split(' ')[0]}! Redirecting to your dashboard...
+                Welcome to CareerBridge, {form.name.split(' ')[0]}! Redirecting to your dashboard...
               </p>
               <div className="mt-4 flex justify-center">
                 <svg className="animate-spin w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24">

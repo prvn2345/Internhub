@@ -52,10 +52,10 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">IH</span>
+              <span className="text-white font-bold text-sm">CB</span>
             </div>
             <span className="font-bold text-xl text-primary-600 dark:text-primary-400">
-              InternHub
+              CareerBridge
             </span>
           </Link>
 
