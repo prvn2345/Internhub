@@ -17,6 +17,7 @@ import JobsPage      from './pages/JobsPage';
 import JobDetailPage from './pages/JobDetailPage';
 import LoginPage     from './pages/auth/LoginPage';
 import RegisterPage  from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import ProfilePage      from './pages/student/ProfilePage';
@@ -56,6 +57,7 @@ function App() {
             <Route path="/jobs/:id"  element={<JobDetailPage />} />
             <Route path="/login"     element={<LoginPage />} />
             <Route path="/register"  element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* ── Authenticated ── */}
             <Route element={<AuthGuard />}>

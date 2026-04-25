@@ -92,6 +92,15 @@ const LoginPage = () => {
               {isLoading ? 'Signing in...' : t('auth.loginBtn')}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              {t('auth.forgotPassword')}
+            </Link>
+          </div>
         </div>
       </div>
     </div>

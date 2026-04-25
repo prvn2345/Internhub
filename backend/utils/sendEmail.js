@@ -88,4 +88,38 @@ const sendSignupOTP = async (recipient, passcode) => {
   await dispatchEmail(recipient, 'Verify Your Email — CareerBridge', html);
 };
 
-module.exports = { dispatchEmail, sendLanguageOTP, sendSignupOTP };
+/* ── Password reset email ─────────────────────────────── */
+const sendPasswordResetEmail = async (recipient, newPassword) => {
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+      <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
+                  padding:30px;border-radius:12px 12px 0 0;text-align:center;">
+        <h1 style="color:#fff;margin:0;font-size:26px;letter-spacing:1px;">CareerBridge</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:6px 0 0;font-size:14px;">Password Reset</p>
+      </div>
+      <div style="background:#fafafa;padding:30px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;">
+        <h2 style="color:#111827;margin-top:0;">Your New Password</h2>
+        <p style="color:#6b7280;font-size:15px;line-height:1.6;">
+          Your password has been reset successfully. Use the password below to sign in to your account.
+          We strongly recommend changing it after your first login.
+        </p>
+        <div style="background:#fff;border:2px dashed #4f46e5;border-radius:10px;
+                    padding:22px;text-align:center;margin:24px 0;">
+          <span style="font-size:28px;font-weight:700;letter-spacing:6px;color:#4f46e5;
+                       font-family:'Courier New',monospace;">
+            ${newPassword}
+          </span>
+        </div>
+        <p style="color:#9ca3af;font-size:13px;">
+          🔒 This password was auto-generated and contains only letters for easy reading.
+        </p>
+        <p style="color:#ef4444;font-size:13px;font-weight:600;">
+          ⚠️ If you did not request this reset, please contact support immediately.
+        </p>
+      </div>
+    </div>
+  `;
+  await dispatchEmail(recipient, 'Your New Password — CareerBridge', html);
+};
+
+module.exports = { dispatchEmail, sendLanguageOTP, sendSignupOTP, sendPasswordResetEmail };

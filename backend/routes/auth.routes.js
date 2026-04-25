@@ -8,6 +8,7 @@ const {
   signIn,
   fetchCurrentUser,
   signOut,
+  forgotPassword,
 } = require('../controllers/auth.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 
@@ -40,5 +41,8 @@ router.post(
 /* Protected */
 router.get('/me',     requireAuth, fetchCurrentUser);
 router.post('/logout', requireAuth, signOut);
+
+/* Public — forgot password (once per day) */
+router.post('/forgot-password', forgotPassword);
 
 module.exports = router;

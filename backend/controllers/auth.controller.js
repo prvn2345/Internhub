@@ -8,9 +8,34 @@ const { validationResult } = require('express-validator');
 const User             = require('../models/User');
 const OTP              = require('../models/OTP');
 const issueAccessToken = require('../utils/generateToken');
-const { sendSignupOTP } = require('../utils/sendEmail');
+const { sendSignupOTP, sendPasswordResetEmail } = require('../utils/sendEmail');
 
 const makePasscode = () => crypto.randomInt(100000, 999999).toString();
+
+/**
+ * Generates a random password using only uppercase and lowercase letters.
+ * No numbers or special characters — easy to read and type.
+ * Length: 12 characters.
+ */
+const generateLettersOnlyPassword = () => {
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // removed I, O to avoid confusion
+  const lowercase = 'abcdefghjkmnpqrstuvwxyz';  // removed i, l, o to avoid confusion
+  const charset   = uppercase + lowercase;
+  let password    = '';
+
+  // Ensure at least 4 uppercase and 4 lowercase
+  for (let i = 0; i < 4; i++) {
+    password += uppercase[crypto.randomInt(0, uppercase.length)];
+    password += lowercase[crypto.randomInt(0, lowercase.length)];
+  }
+  // Fill remaining 4 characters randomly
+  for (let i = 0; i < 4; i++) {
+    password += charset[crypto.randomInt(0, charset.length)];
+  }
+
+  // Shuffle the password so it's not predictably structured
+  return password.split('').sort(() => crypto.randomInt(0, 3) - 1).join('');
+};
 
 /* ── Send registration OTP ────────────────────────────── */
 exports.sendSignupPasscode = async (req, res) => {
@@ -251,3 +276,81 @@ exports.fetchCurrentUser = async (req, res) => {
 /* ── Sign out ─────────────────────────────────────────── */
 exports.signOut = (_req, res) =>
   res.json({ success: true, message: 'Signed out successfully' });
+
+/* ── Forgot password ──────────────────────────────────── */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body; // email OR phone number
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your registered email address or phone number.',
+      });
+    }
+
+    const query = identifier.includes('@')
+      ? { emailAddress: identifier.toLowerCase().trim() }
+      : { contactNumber: identifier.trim() };
+
+    const account = await User.findOne(query);
+
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with that email address or phone number.',
+      });
+    }
+
+    if (!account.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'This account has been suspended. Please contact support.',
+      });
+    }
+
+    /* ── Once-per-day rate limit ── */
+    if (account.passwordResetUsedAt) {
+      const lastReset  = new Date(account.passwordResetUsedAt);
+      const now        = new Date();
+      const msSince    = now - lastReset;
+      const msIn24h    = 24 * 60 * 60 * 1000;
+
+      if (msSince < msIn24h) {
+        const nextAllowed = new Date(lastReset.getTime() + msIn24h);
+        const hoursLeft   = Math.ceil((nextAllowed - now) / (60 * 60 * 1000));
+        return res.status(429).json({
+          success  : false,
+          rateLimited: true,
+          message  : `You can use this option only once per day. Please try again in ${hoursLeft} hour${hoursLeft === 1 ? '' : 's'}.`,
+        });
+      }
+    }
+
+    /* ── Generate letters-only password ── */
+    const freshPassword = generateLettersOnlyPassword();
+
+    /* ── Update account ── */
+    account.hashedPassword      = freshPassword;
+    account.passwordResetUsedAt = new Date();
+    await account.save(); // pre-save hook hashes the password
+
+    /* ── Send email ── */
+    await sendPasswordResetEmail(account.emailAddress, freshPassword);
+
+    return res.json({
+      success: true,
+      message: `A new password has been sent to ${account.emailAddress}.`,
+    });
+
+  } catch (err) {
+    console.error('forgotPassword error:', err);
+    const smtpMsg = (err?.response || '').toLowerCase();
+    if (smtpMsg.includes('does not exist') || smtpMsg.includes('no such user')) {
+      return res.status(400).json({
+        success: false,
+        message: 'The email address on your account appears invalid. Please contact support.',
+      });
+    }
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+};

@@ -73,6 +73,9 @@ const userSchema = new mongoose.Schema(
 
     isVerified : { type: Boolean, default: false },
     isActive   : { type: Boolean, default: true  },
+
+    /* ── Password reset rate-limit ── */
+    passwordResetUsedAt : { type: Date, default: null },
   },
   { timestamps: true }
 );
