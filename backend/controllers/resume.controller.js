@@ -179,47 +179,34 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     // Generate PDF
     const pdfBuffer = await generateResumePDF(resumeData);
 
-    let resumeUrl;
-    let cvPublicId = null;
-
-    // Convert to base64 data URL for direct download (no Cloudinary needed)
+    // Store resume data for re-download + save PDF buffer reference
+    // We'll use the download endpoint to stream the PDF
     const base64PDF = pdfBuffer.toString('base64');
-    resumeUrl = `data:application/pdf;base64,${base64PDF}`;
-    cvPublicId = null;
 
-    // Also try Cloudinary if configured (for persistent storage)
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    if (cloudName && cloudName !== 'your_cloud_name') {
-      try {
-        const uploadResult = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            {
-              folder        : 'careerbridge/resumes',
-              resource_type : 'raw',
-              public_id     : `resume_${req.user._id}`,
-              access_mode   : 'public',
-              overwrite     : true,
-            },
-            (error, result) => { if (error) reject(error); else resolve(result); }
-          );
-          stream.end(pdfBuffer);
-        });
-        resumeUrl  = uploadResult.secure_url;
-        cvPublicId = uploadResult.public_id;
-      } catch (cloudErr) {
-        console.warn('Cloudinary upload failed, using base64:', cloudErr.message);
-        // Keep base64 fallback
-      }
-    }
+    // Save resume data back to PendingResume with the generated PDF
+    await PendingResume.findOneAndUpdate(
+      { userId: req.user._id },
+      {
+        userId,
+        resumeData,
+        generatedPDF: base64PDF,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // keep 7 days
+      },
+      { upsert: true, new: true }
+    );
+
+    // Build download URL pointing to our backend endpoint
+    const downloadUrl = `${process.env.CLIENT_URL ? process.env.CLIENT_URL.replace('frontend', 'api-zevz') : ''}/api/resume/download/${req.user._id}`.replace('careerbridge-frontend.vercel.app', 'careerbridge-api-zevz.onrender.com');
+    const resumeUrl = `/api/resume/download/${req.user._id}`;
+    const cvPublicId = null;
 
     // Attach resume URL to user profile
     await User.findByIdAndUpdate(req.user._id, {
-      cvFileUrl : resumeUrl,
+      cvFileUrl : `https://careerbridge-api-zevz.onrender.com/api/resume/download/${req.user._id}`,
       ...(cvPublicId && { cvPublicId }),
     });
 
-    // Clean up pending resume data and OTP records
-    await PendingResume.deleteOne({ userId: req.user._id });
+    // Clean up OTP records (keep PendingResume for download)
     await OTP.deleteMany({ recipientEmail: req.user.emailAddress, useCase: 'resume-payment' });
 
     // Send confirmation email
@@ -255,10 +242,40 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     return res.json({
       success  : true,
       message  : 'Payment verified. Your resume has been generated and attached to your profile.',
-      resumeUrl,
+      resumeUrl: `https://careerbridge-api-zevz.onrender.com/api/resume/download/${req.user._id}`,
     });
   } catch (err) {
     console.error('verifyPaymentAndGenerate error:', err);
     return res.status(500).json({ success: false, message: err.message || 'Failed to generate resume. Please contact support.' });
+  }
+};
+
+/* ── 4. Download resume PDF ───────────────────────────── */
+exports.downloadResume = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Verify the requesting user matches
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ success: false, message: 'Not authorised' });
+    }
+
+    const pending = await PendingResume.findOne({ userId });
+    if (!pending || !pending.generatedPDF) {
+      return res.status(404).json({ success: false, message: 'Resume not found. Please generate a new one.' });
+    }
+
+    const pdfBuffer = Buffer.from(pending.generatedPDF, 'base64');
+
+    res.set({
+      'Content-Type'       : 'application/pdf',
+      'Content-Disposition': `attachment; filename="CareerBridge_Resume.pdf"`,
+      'Content-Length'     : pdfBuffer.length,
+    });
+
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error('downloadResume error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to download resume.' });
   }
 };
