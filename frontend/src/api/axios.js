@@ -41,7 +41,8 @@ apiClient.interceptors.response.use(
       const url = err.config?.url || '';
       if (!url.includes('/auth/me')) {
         localStorage.removeItem('cb-auth');
-        window.location.href = '/login';
+        toast && toast.error('Session expired. Please log in again.');
+        setTimeout(() => { window.location.href = '/login'; }, 1500);
       }
     }
     return Promise.reject(err);
