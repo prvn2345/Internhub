@@ -179,27 +179,38 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     // Generate PDF
     const pdfBuffer = await generateResumePDF(resumeData);
 
-    // Upload PDF to Cloudinary
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder       : 'careerbridge/resumes',
-          resource_type: 'raw',
-          public_id    : `resume_${req.user._id}_${Date.now()}`,
-          format       : 'pdf',
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      stream.end(pdfBuffer);
-    });
+    let resumeUrl;
+    let cvPublicId = null;
+
+    // Try Cloudinary upload — fall back to base64 data URL if not configured
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    if (cloudName && cloudName !== 'your_cloud_name') {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder       : 'careerbridge/resumes',
+            resource_type: 'raw',
+            public_id    : `resume_${req.user._id}_${Date.now()}`,
+            format       : 'pdf',
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(pdfBuffer);
+      });
+      resumeUrl  = uploadResult.secure_url;
+      cvPublicId = uploadResult.public_id;
+    } else {
+      // Cloudinary not configured — store as base64 data URL
+      resumeUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+    }
 
     // Attach resume URL to user profile
     await User.findByIdAndUpdate(req.user._id, {
-      cvFileUrl : uploadResult.secure_url,
-      cvPublicId: uploadResult.public_id,
+      cvFileUrl : resumeUrl,
+      ...(cvPublicId && { cvPublicId }),
     });
 
     // Clean up pending resume data and OTP records
@@ -239,7 +250,7 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     return res.json({
       success  : true,
       message  : 'Payment verified. Your resume has been generated and attached to your profile.',
-      resumeUrl: uploadResult.secure_url,
+      resumeUrl,
     });
   } catch (err) {
     console.error('verifyPaymentAndGenerate error:', err);
