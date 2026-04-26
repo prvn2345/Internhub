@@ -133,10 +133,21 @@ const ResumeBuilderPage = () => {
       if (!loaded) { toast.error('Failed to load payment gateway'); return; }
       const options = {
         key: data.keyId, amount: data.amount, currency: data.currency,
-        name: 'CareerBridge Premium', description: 'Professional Resume Generation',
+        name: 'CareerBridge Premium', description: 'Professional Resume Generation (₹50)',
         order_id: data.orderId,
         prefill: { name: user?.name, email: user?.email, contact: user?.phone },
         theme: { color: '#4f46e5' },
+        // Enable all payment methods including UPI
+        config: {
+          display: {
+            blocks: {
+              upi: { name: 'Pay via UPI', instruments: [{ method: 'upi' }] },
+              other: { name: 'Other Payment Methods', instruments: [{ method: 'card' }, { method: 'netbanking' }, { method: 'wallet' }] },
+            },
+            sequence: ['block.upi', 'block.other'],
+            preferences: { show_default_blocks: false },
+          },
+        },
         handler: async (response) => {
           try {
             const res = await apiClient.post('/resume/verify-payment', {
