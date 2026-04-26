@@ -8,6 +8,7 @@ const {
   setLanguage,
   toggleBookmark,
   getBookmarks,
+  changePassword,
 } = require('../controllers/user.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 const { cvUploader, avatarUploader } = require('../utils/cloudinary');
@@ -21,5 +22,6 @@ router.post('/profile-picture', avatarUploader.single('profilePicture'), uploadA
 router.put('/language',                   setLanguage);
 router.post('/saved-jobs/:jobId',         toggleBookmark);
 router.get('/saved-jobs',                 getBookmarks);
+router.put('/change-password',            changePassword);
 
 module.exports = router;

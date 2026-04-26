@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PlusIcon, TrashIcon, PencilIcon, PaperClipIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, PencilIcon, PaperClipIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import useAuthStore from '../../store/authStore';
@@ -13,6 +13,11 @@ const ProfilePage = () => {
   const [newSkill, setNewSkill] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+
+  // Change password state
+  const [pwForm, setPwForm]         = useState({ current: '', next: '', confirm: '' });
+  const [showPw, setShowPw]         = useState({ current: false, next: false, confirm: false });
+  const [savingPw, setSavingPw]     = useState(false);
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -82,6 +87,39 @@ const ProfilePage = () => {
   const removeEducation = (index) => {
     setForm({ ...form, education: form.education.filter((_, i) => i !== index) });
   };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (pwForm.next.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setSavingPw(true);
+    try {
+      await api.put('/users/change-password', {
+        currentPassword: pwForm.current,
+        newPassword    : pwForm.next,
+      });
+      toast.success('Password changed successfully!');
+      setPwForm({ current: '', next: '', confirm: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to change password');
+    }
+    setSavingPw(false);
+  };
+
+  const pwStrength = (pw) => {
+    if (!pw) return null;
+    if (pw.length < 6)  return { label: 'Too short', color: 'bg-red-500',    w: 'w-1/4' };
+    if (pw.length < 8)  return { label: 'Weak',      color: 'bg-orange-400', w: 'w-2/4' };
+    if (pw.length < 12) return { label: 'Good',      color: 'bg-yellow-400', w: 'w-3/4' };
+    return               { label: 'Strong',    color: 'bg-green-500',  w: 'w-full' };
+  };
+  const strength = pwStrength(pwForm.next);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -254,6 +292,93 @@ const ProfilePage = () => {
             </div>
           )}
         </div>
+
+        {/* ── Change Password ── */}
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <LockClosedIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">Change Password</h2>
+          </div>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mb-5">
+            Use this section to replace your auto-generated password with one of your own.
+          </p>
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            {/* Current password */}
+            {[
+              { label: 'Current Password',     key: 'current',  placeholder: 'Enter current password'  },
+              { label: 'New Password',          key: 'next',     placeholder: 'Min. 6 characters'       },
+              { label: 'Confirm New Password',  key: 'confirm',  placeholder: 'Re-enter new password'   },
+            ].map(({ label, key, placeholder }) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {label}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw[key] ? 'text' : 'password'}
+                    value={pwForm[key]}
+                    onChange={(e) => setPwForm({ ...pwForm, [key]: e.target.value })}
+                    placeholder={placeholder}
+                    className={`input-field text-sm pr-10 ${
+                      key === 'confirm' && pwForm.confirm && pwForm.next !== pwForm.confirm
+                        ? 'border-red-400 focus:ring-red-400'
+                        : key === 'confirm' && pwForm.confirm && pwForm.next === pwForm.confirm
+                        ? 'border-green-400 focus:ring-green-400'
+                        : ''
+                    }`}
+                    autoComplete={key === 'current' ? 'current-password' : 'new-password'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw({ ...showPw, [key]: !showPw[key] })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Toggle visibility"
+                  >
+                    {showPw[key]
+                      ? <EyeSlashIcon className="w-4 h-4" />
+                      : <EyeIcon      className="w-4 h-4" />
+                    }
+                  </button>
+                </div>
+
+                {/* Strength bar for new password */}
+                {key === 'next' && pwForm.next && strength && (
+                  <div className="mt-1.5">
+                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${strength.color} ${strength.w}`} />
+                    </div>
+                    <p className={`text-xs mt-0.5 ${
+                      strength.label === 'Strong' ? 'text-green-600' :
+                      strength.label === 'Good'   ? 'text-yellow-600' : 'text-red-500'
+                    }`}>{strength.label}</p>
+                  </div>
+                )}
+
+                {/* Match indicator */}
+                {key === 'confirm' && pwForm.confirm && (
+                  <p className={`text-xs mt-0.5 ${pwForm.next === pwForm.confirm ? 'text-green-600' : 'text-red-500'}`}>
+                    {pwForm.next === pwForm.confirm ? '✓ Passwords match' : 'Passwords do not match'}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            <button
+              type="submit"
+              disabled={
+                savingPw ||
+                !pwForm.current ||
+                pwForm.next.length < 6 ||
+                pwForm.next !== pwForm.confirm
+              }
+              className="btn-primary text-sm py-2.5 px-6"
+            >
+              {savingPw ? 'Saving...' : 'Update Password'}
+            </button>
+          </form>
+        </div>
+
       </div>
     </div>
   );

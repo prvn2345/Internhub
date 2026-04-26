@@ -101,7 +101,6 @@ const sendPasswordResetEmail = async (recipient, newPassword) => {
         <h2 style="color:#111827;margin-top:0;">Your New Password</h2>
         <p style="color:#6b7280;font-size:15px;line-height:1.6;">
           Your password has been reset. Use the password below to sign in.
-          We recommend changing it after your first login.
         </p>
         <div style="background:#fff;border:2px dashed #4f46e5;border-radius:10px;
                     padding:22px;text-align:center;margin:24px 0;">
@@ -113,6 +112,19 @@ const sendPasswordResetEmail = async (recipient, newPassword) => {
         <p style="color:#9ca3af;font-size:13px;">
           🔒 This password contains only letters — no numbers or special characters.
         </p>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+                    padding:16px;margin:20px 0;">
+          <p style="color:#1d4ed8;font-size:14px;font-weight:600;margin:0 0 6px;">
+            💡 Want to set your own password?
+          </p>
+          <p style="color:#3b82f6;font-size:13px;margin:0;line-height:1.6;">
+            After signing in, go to your <strong>Profile page</strong> and scroll down to the
+            <strong>"Change Password"</strong> section to replace this auto-generated password
+            with one of your own choosing.
+          </p>
+        </div>
+
         <p style="color:#ef4444;font-size:13px;font-weight:600;">
           ⚠️ If you did not request this reset, please contact support immediately.
         </p>
