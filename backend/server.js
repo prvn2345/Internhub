@@ -36,6 +36,7 @@ app.use('/api/applications', require('./routes/application.routes'));
 app.use('/api/otp',          require('./routes/otp.routes'));
 app.use('/api/admin',        require('./routes/admin.routes'));
 app.use('/api/seed',         require('./routes/seed.routes'));
+app.use('/api/resume',       require('./routes/resume.routes'));
 
 /* ── Health probe ─────────────────────────────────────── */
 app.get('/api/health', (_req, res) =>

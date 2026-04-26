@@ -153,6 +153,13 @@ const Navbar = () => {
                         >
                           {t('nav.savedJobs')}
                         </Link>
+                        <Link
+                          to="/resume-builder"
+                          onClick={() => setDropdownOpen(false)}
+                          className="block px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-medium"
+                        >
+                          ✨ Resume Builder (₹50)
+                        </Link>
                       </>
                     )}
                     {user.role === 'employer' && (

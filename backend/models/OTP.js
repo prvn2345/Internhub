@@ -17,7 +17,7 @@ const passcodeSchema = new mongoose.Schema({
   },
   useCase : {
     type   : String,
-    enum   : ['language-change', 'email-verify', 'password-reset'],
+    enum   : ['language-change', 'email-verify', 'password-reset', 'resume-payment'],
     default: 'language-change',
   },
   expiresAt : {

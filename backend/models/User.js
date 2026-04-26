@@ -76,6 +76,9 @@ const userSchema = new mongoose.Schema(
 
     /* ── Password reset rate-limit ── */
     passwordResetUsedAt : { type: Date, default: null },
+
+    /* ── Temporary resume data (cleared after PDF generation) ── */
+    pendingResumeData : { type: String, default: null },
   },
   { timestamps: true }
 );

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   BriefcaseIcon, ClockIcon, CheckCircleIcon, XCircleIcon,
-  StarIcon, UserCircleIcon, ArrowRightIcon,
+  StarIcon, UserCircleIcon, ArrowRightIcon, SparklesIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import useAuthStore from '../../store/authStore';
@@ -156,6 +156,25 @@ const StudentDashboard = () => {
               {t('profile.edit')}
             </Link>
           </div>
+        </div>
+
+        {/* Premium Resume Builder CTA */}
+        <div className="mt-4">
+          <Link to="/resume-builder"
+            className="card p-4 flex items-center gap-3 hover:shadow-md transition-shadow
+                       bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20
+                       border-amber-200 dark:border-amber-800 block">
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+              <SparklesIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Premium Resume Builder</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Generate a professional PDF resume for ₹50</p>
+            </div>
+            <span className="text-amber-600 dark:text-amber-400 text-xs font-bold bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
+              ₹50
+            </span>
+          </Link>
         </div>
       </div>
     </div>

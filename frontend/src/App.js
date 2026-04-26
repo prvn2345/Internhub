@@ -23,6 +23,7 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import ProfilePage      from './pages/student/ProfilePage';
 import ApplicationsPage from './pages/student/ApplicationsPage';
 import SavedJobsPage    from './pages/student/SavedJobsPage';
+import ResumeBuilderPage from './pages/student/ResumeBuilderPage';
 
 import EmployerDashboard from './pages/employer/EmployerDashboard';
 import PostJobPage       from './pages/employer/PostJobPage';
@@ -68,6 +69,7 @@ function App() {
                 <Route path="/profile"     element={<ProfilePage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/saved-jobs"  element={<SavedJobsPage />} />
+                <Route path="/resume-builder" element={<ResumeBuilderPage />} />
               </Route>
 
               {/* Employer */}
