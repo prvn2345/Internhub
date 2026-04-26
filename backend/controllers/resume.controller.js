@@ -144,10 +144,12 @@ exports.createResumeOrder = async (req, res) => {
       expiresAt     : new Date(Date.now() + 30 * 60 * 1000), // 30 min to complete payment
     });
 
-    // Also store resume data on the user document temporarily
-    await User.findByIdAndUpdate(req.user._id, {
-      $set: { pendingResumeData: JSON.stringify(resumeData) },
-    });
+    // Store resume data on user document using strict:false workaround
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { pendingResumeData: JSON.stringify(resumeData) },
+      { strict: false }
+    );
 
     return res.json({
       success : true,
@@ -158,7 +160,10 @@ exports.createResumeOrder = async (req, res) => {
     });
   } catch (err) {
     console.error('createResumeOrder error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to create payment order.' });
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to create payment order.',
+    });
   }
 };
 
@@ -206,10 +211,11 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     });
 
     // Attach resume URL to user profile + clear pending data
-    await User.findByIdAndUpdate(req.user._id, {
-      $set  : { cvFileUrl: uploadResult.secure_url, cvPublicId: uploadResult.public_id },
-      $unset: { pendingResumeData: '' },
-    });
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { cvFileUrl: uploadResult.secure_url, cvPublicId: uploadResult.public_id, pendingResumeData: null },
+      { strict: false }
+    );
 
     // Clean up OTP record
     await OTP.deleteMany({ recipientEmail: req.user.emailAddress, useCase: 'resume-payment' });
@@ -251,6 +257,6 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     });
   } catch (err) {
     console.error('verifyPaymentAndGenerate error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to generate resume. Please contact support.' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to generate resume. Please contact support.' });
   }
 };
