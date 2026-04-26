@@ -14,12 +14,31 @@ const generateResumePDF = require('../utils/generateResumePDF');
 const { dispatchEmail } = require('../utils/sendEmail');
 const { cloudinary }  = require('../utils/cloudinary');
 
-const razorpay = new Razorpay({
-  key_id    : process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const RESUME_FEE_PAISE = parseInt(process.env.RESUME_FEE_PAISE || '5000', 10);
 
-const RESUME_FEE_PAISE = parseInt(process.env.RESUME_FEE_PAISE || '5000', 10); // ₹50
+/* Lazy Razorpay init — avoids crash if keys not set at startup */
+const getRazorpay = () => {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay keys are not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.');
+  }
+  return new Razorpay({
+    key_id    : process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+};
+
+/* ── 0. Health check for Razorpay config ─────────────── */
+exports.checkConfig = (_req, res) => {
+  const keyId     = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  return res.json({
+    success       : !!(keyId && keySecret),
+    keyIdSet      : !!keyId,
+    keySecretSet  : !!keySecret,
+    keyIdPreview  : keyId ? keyId.slice(0, 12) + '...' : 'NOT SET',
+    feePaise      : RESUME_FEE_PAISE,
+  });
+};
 
 /* ── 1. Send OTP before payment ──────────────────────── */
 exports.sendResumeOTP = async (req, res) => {
@@ -104,6 +123,7 @@ exports.createResumeOrder = async (req, res) => {
     await record.save();
 
     // Create Razorpay order
+    const razorpay = getRazorpay();
     const order = await razorpay.orders.create({
       amount  : RESUME_FEE_PAISE,
       currency: 'INR',
