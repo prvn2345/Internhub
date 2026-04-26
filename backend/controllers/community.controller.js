@@ -15,26 +15,16 @@ const Friendship = require('../models/Friendship');
 const User       = require('../models/User');
 const { cloudinary } = require('../utils/cloudinary');
 const multer     = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-/* ── Cloudinary storage for community media ── */
-let communityStorage;
-try {
-  communityStorage = new CloudinaryStorage({
-    cloudinary,
-    params: async (_req, file) => ({
-      folder        : 'careerbridge/community',
-      resource_type : file.mimetype.startsWith('video') ? 'video' : 'image',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov'],
-    }),
-  });
-} catch (e) {
-  console.warn('Community Cloudinary storage init failed:', e.message);
-}
-
+/* ── Use memory storage — upload to Cloudinary manually in controller ── */
 exports.communityUpload = multer({
-  storage: communityStorage || multer.memoryStorage(),
-  limits : { fileSize: 50 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits : { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg','image/jpg','image/png','image/webp','image/gif','video/mp4','video/quicktime','video/avi'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only images and videos are allowed'));
+  },
 });
 
 /* ── Helper: get friend count for a user ── */
@@ -274,17 +264,30 @@ exports.createPost = async (req, res) => {
       caption: caption || '',
     };
 
-    if (req.file) {
-      // If Cloudinary upload succeeded (file has path), use it
-      if (req.file.path) {
-        postData.mediaUrl      = req.file.path;
-        postData.mediaPublicId = req.file.filename;
-        postData.mediaType     = req.file.mimetype?.startsWith('video') ? 'video' : 'image';
-      } else if (req.file.buffer) {
-        // Fallback: convert to base64 data URL
-        const mime = req.file.mimetype || 'image/jpeg';
-        postData.mediaUrl  = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
-        postData.mediaType = mime.startsWith('video') ? 'video' : 'image';
+    if (req.file && req.file.buffer) {
+      const isVideo    = req.file.mimetype?.startsWith('video');
+      const resourceType = isVideo ? 'video' : 'image';
+
+      try {
+        // Upload buffer to Cloudinary via stream
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder        : 'careerbridge/community',
+              resource_type : resourceType,
+              public_id     : `post_${userId}_${Date.now()}`,
+            },
+            (error, result) => { if (error) reject(error); else resolve(result); }
+          );
+          stream.end(req.file.buffer);
+        });
+
+        postData.mediaUrl      = uploadResult.secure_url;
+        postData.mediaPublicId = uploadResult.public_id;
+        postData.mediaType     = isVideo ? 'video' : 'image';
+      } catch (uploadErr) {
+        console.warn('Media upload failed, posting without media:', uploadErr.message);
+        // Post without media rather than failing entirely
       }
     }
 
