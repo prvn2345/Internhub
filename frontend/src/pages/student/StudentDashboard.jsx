@@ -175,6 +175,21 @@ const StudentDashboard = () => {
               ₹50
             </span>
           </Link>
+          <Link to="/plans"
+            className="card p-4 flex items-center gap-3 hover:shadow-md transition-shadow
+                       bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20
+                       border-primary-200 dark:border-primary-800 block mt-3">
+            <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+              <BriefcaseIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Subscription Plans</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Upgrade to apply for more internships</p>
+            </div>
+            <span className="text-primary-600 dark:text-primary-400 text-xs font-bold bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded-full">
+              From ₹100
+            </span>
+          </Link>
         </div>
       </div>
     </div>

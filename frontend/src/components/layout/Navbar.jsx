@@ -166,6 +166,13 @@ const Navbar = () => {
                         >
                           ✨ Resume Builder (₹50)
                         </Link>
+                        <Link
+                          to="/plans"
+                          onClick={() => setDropdownOpen(false)}
+                          className="block px-4 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 font-medium"
+                        >
+                          💎 Subscription Plans
+                        </Link>
                       </>
                     )}
                     {user.role === 'employer' && (

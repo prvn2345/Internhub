@@ -27,7 +27,16 @@ const ApplyModal = ({ job, onSuccess, onClose }) => {
 
       onSuccess();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit application');
+      const res = error.response?.data;
+      if (res?.subscriptionLimit) {
+        toast.error(res.message, { duration: 6000 });
+        // Show upgrade prompt
+        if (window.confirm(`${res.message}\n\nWould you like to upgrade your plan?`)) {
+          window.location.href = '/plans';
+        }
+      } else {
+        toast.error(res?.message || 'Failed to submit application');
+      }
     } finally {
       setLoading(false);
     }

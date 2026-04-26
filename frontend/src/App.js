@@ -24,6 +24,7 @@ import ProfilePage      from './pages/student/ProfilePage';
 import ApplicationsPage from './pages/student/ApplicationsPage';
 import SavedJobsPage    from './pages/student/SavedJobsPage';
 import ResumeBuilderPage from './pages/student/ResumeBuilderPage';
+import PlansPage        from './pages/student/PlansPage';
 
 import EmployerDashboard from './pages/employer/EmployerDashboard';
 import PostJobPage       from './pages/employer/PostJobPage';
@@ -72,6 +73,7 @@ function App() {
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/saved-jobs"  element={<SavedJobsPage />} />
                 <Route path="/resume-builder" element={<ResumeBuilderPage />} />
+                <Route path="/plans"       element={<PlansPage />} />
               </Route>
 
               {/* Employer */}

@@ -6,6 +6,7 @@
 const Application = require('../models/Application');
 const Job         = require('../models/Job');
 const User        = require('../models/User');
+const Subscription = require('../models/Subscription');
 
 const VALID_STAGES = ['pending', 'reviewed', 'shortlisted', 'rejected', 'hired'];
 
@@ -22,6 +23,23 @@ exports.submitApplication = async (req, res) => {
     }
     if (new Date(listing.closingDate) < new Date()) {
       return res.status(400).json({ success: false, message: 'Application deadline has passed' });
+    }
+
+    /* ── Check subscription limit ── */
+    let sub = await Subscription.findOne({ candidate: req.user._id });
+    if (!sub) sub = await Subscription.create({ userId: req.user._id, plan: 'free' });
+    await sub.resetIfNewMonth();
+
+    const canApplyResult = sub.canApply();
+    if (!canApplyResult.allowed) {
+      return res.status(403).json({
+        success         : false,
+        subscriptionLimit: true,
+        message         : canApplyResult.message,
+        plan            : canApplyResult.plan,
+        limit           : canApplyResult.limit,
+        used            : canApplyResult.used,
+      });
     }
 
     const alreadyApplied = await Application.findOne({
@@ -48,6 +66,13 @@ exports.submitApplication = async (req, res) => {
     }
 
     const submission = await Application.create(submissionData);
+
+    /* Increment subscription usage */
+    await Subscription.findOneAndUpdate(
+      { userId: req.user._id },
+      { $inc: { appsUsedThisMonth: 1 } }
+    );
+
     await Job.findByIdAndUpdate(req.params.jobId, { $inc: { totalApplications: 1 } });
 
     return res.status(201).json({
