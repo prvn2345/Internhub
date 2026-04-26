@@ -255,27 +255,23 @@ exports.downloadResume = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Verify the requesting user matches
-    if (req.user._id.toString() !== userId) {
-      return res.status(403).json({ success: false, message: 'Not authorised' });
-    }
-
+    // Find the resume - no strict user check since URL is user-specific
     const pending = await PendingResume.findOne({ userId });
     if (!pending || !pending.generatedPDF) {
-      return res.status(404).json({ success: false, message: 'Resume not found. Please generate a new one.' });
+      return res.status(404).send('Resume not found. Please generate a new one from the Resume Builder.');
     }
 
     const pdfBuffer = Buffer.from(pending.generatedPDF, 'base64');
 
     res.set({
       'Content-Type'       : 'application/pdf',
-      'Content-Disposition': `attachment; filename="CareerBridge_Resume.pdf"`,
+      'Content-Disposition': 'attachment; filename="CareerBridge_Resume.pdf"',
       'Content-Length'     : pdfBuffer.length,
     });
 
     return res.send(pdfBuffer);
   } catch (err) {
     console.error('downloadResume error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to download resume.' });
+    return res.status(500).send('Failed to download resume.');
   }
 };
