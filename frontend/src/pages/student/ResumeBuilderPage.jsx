@@ -194,6 +194,18 @@ const ResumeBuilderPage = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary px-6 py-3 font-semibold flex items-center justify-center gap-2"
+            onClick={(e) => {
+              // For base64 URLs, trigger download programmatically
+              if (resumeUrl.startsWith('data:')) {
+                e.preventDefault();
+                const link = document.createElement('a');
+                link.href = resumeUrl;
+                link.download = 'CareerBridge_Resume.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            }}
           >
             <DocumentTextIcon className="w-5 h-5" /> Download Resume (PDF)
           </a>

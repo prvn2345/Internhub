@@ -182,31 +182,34 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     let resumeUrl;
     let cvPublicId = null;
 
-    // Try Cloudinary upload — fall back to base64 data URL if not configured
+    // Convert to base64 data URL for direct download (no Cloudinary needed)
+    const base64PDF = pdfBuffer.toString('base64');
+    resumeUrl = `data:application/pdf;base64,${base64PDF}`;
+    cvPublicId = null;
+
+    // Also try Cloudinary if configured (for persistent storage)
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     if (cloudName && cloudName !== 'your_cloud_name') {
-      const uploadResult = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder       : 'careerbridge/resumes',
-            resource_type: 'raw',
-            public_id    : `resume_${req.user._id}_${Date.now()}`,
-            format       : 'pdf',
-            type         : 'upload',
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-        stream.end(pdfBuffer);
-      });
-      // Use fl_attachment so browser downloads instead of trying to render inline
-      resumeUrl  = uploadResult.secure_url.replace('/upload/', '/upload/fl_attachment/');
-      cvPublicId = uploadResult.public_id;
-    } else {
-      // Cloudinary not configured — store as base64 data URL
-      resumeUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+      try {
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder        : 'careerbridge/resumes',
+              resource_type : 'raw',
+              public_id     : `resume_${req.user._id}`,
+              access_mode   : 'public',
+              overwrite     : true,
+            },
+            (error, result) => { if (error) reject(error); else resolve(result); }
+          );
+          stream.end(pdfBuffer);
+        });
+        resumeUrl  = uploadResult.secure_url;
+        cvPublicId = uploadResult.public_id;
+      } catch (cloudErr) {
+        console.warn('Cloudinary upload failed, using base64:', cloudErr.message);
+        // Keep base64 fallback
+      }
     }
 
     // Attach resume URL to user profile
