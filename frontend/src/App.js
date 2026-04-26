@@ -33,6 +33,7 @@ import ApplicantsPage    from './pages/employer/ApplicantsPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers     from './pages/admin/AdminUsers';
 import AdminJobs      from './pages/admin/AdminJobs';
+import PublicSpacePage from './pages/community/PublicSpacePage';
 
 import AuthGuard from './components/auth/ProtectedRoute';
 import RoleGuard from './components/auth/RoleRoute';
@@ -59,6 +60,7 @@ function App() {
             <Route path="/login"     element={<LoginPage />} />
             <Route path="/register"  element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/community" element={<PublicSpacePage />} />
 
             {/* ── Authenticated ── */}
             <Route element={<AuthGuard />}>

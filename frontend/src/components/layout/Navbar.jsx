@@ -73,6 +73,12 @@ const Navbar = () => {
             >
               {t('nav.jobs')}
             </Link>
+            <Link
+              to="/community"
+              className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
+            >
+              Community
+            </Link>
             {user?.role === 'employer' && (
               <Link
                 to="/employer/post-job"
@@ -220,6 +226,13 @@ const Navbar = () => {
             className="block text-gray-700 dark:text-gray-200 font-medium py-2"
           >
             {t('nav.jobs')}
+          </Link>
+          <Link
+            to="/community"
+            onClick={() => setMobileOpen(false)}
+            className="block text-gray-700 dark:text-gray-200 font-medium py-2"
+          >
+            Community
           </Link>
           {user ? (
             <>
