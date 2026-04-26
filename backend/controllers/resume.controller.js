@@ -187,24 +187,18 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     await PendingResume.findOneAndUpdate(
       { userId: req.user._id },
       {
-        userId,
+        userId    : req.user._id,
         resumeData,
         generatedPDF: base64PDF,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // keep 7 days
+        expiresAt : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
       { upsert: true, new: true }
     );
 
-    // Build download URL pointing to our backend endpoint
-    const downloadUrl = `${process.env.CLIENT_URL ? process.env.CLIENT_URL.replace('frontend', 'api-zevz') : ''}/api/resume/download/${req.user._id}`.replace('careerbridge-frontend.vercel.app', 'careerbridge-api-zevz.onrender.com');
-    const resumeUrl = `/api/resume/download/${req.user._id}`;
-    const cvPublicId = null;
+    // Attach resume download URL to user profile
+    const downloadUrl = `https://careerbridge-api-zevz.onrender.com/api/resume/download/${req.user._id}`;
 
-    // Attach resume URL to user profile
-    await User.findByIdAndUpdate(req.user._id, {
-      cvFileUrl : `https://careerbridge-api-zevz.onrender.com/api/resume/download/${req.user._id}`,
-      ...(cvPublicId && { cvPublicId }),
-    });
+    await User.findByIdAndUpdate(req.user._id, { cvFileUrl: downloadUrl });
 
     // Clean up OTP records (keep PendingResume for download)
     await OTP.deleteMany({ recipientEmail: req.user.emailAddress, useCase: 'resume-payment' });
@@ -242,7 +236,7 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
     return res.json({
       success  : true,
       message  : 'Payment verified. Your resume has been generated and attached to your profile.',
-      resumeUrl: `https://careerbridge-api-zevz.onrender.com/api/resume/download/${req.user._id}`,
+      resumeUrl: downloadUrl,
     });
   } catch (err) {
     console.error('verifyPaymentAndGenerate error:', err);

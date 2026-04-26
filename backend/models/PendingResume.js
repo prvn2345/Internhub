@@ -15,6 +15,6 @@ const pendingResumeSchema = new mongoose.Schema({
 });
 
 pendingResumeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-pendingResumeSchema.index({ userId: 1 }, { unique: true });
+pendingResumeSchema.index({ userId: 1 });
 
 module.exports = mongoose.model('PendingResume', pendingResumeSchema);
