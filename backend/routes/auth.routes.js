@@ -9,6 +9,8 @@ const {
   fetchCurrentUser,
   signOut,
   forgotPassword,
+  verifyChromeOTP,
+  getLoginHistory,
 } = require('../controllers/auth.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 
@@ -44,5 +46,11 @@ router.post('/logout', requireAuth, signOut);
 
 /* Public — forgot password (once per day) */
 router.post('/forgot-password', forgotPassword);
+
+/* Public — Chrome OTP verification */
+router.post('/verify-chrome-otp', verifyChromeOTP);
+
+/* Protected — login history */
+router.get('/login-history', requireAuth, getLoginHistory);
 
 module.exports = router;

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PlusIcon, TrashIcon, PencilIcon, PaperClipIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, PencilIcon, PaperClipIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ComputerDesktopIcon, DevicePhoneMobileIcon, ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import useAuthStore from '../../store/authStore';
@@ -13,6 +13,8 @@ const ProfilePage = () => {
   const [newSkill, setNewSkill] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [loginHistory, setLoginHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Change password state
   const [pwForm, setPwForm]         = useState({ current: '', next: '', confirm: '' });
@@ -28,6 +30,19 @@ const ProfilePage = () => {
     education: user?.education || [],
     experience: user?.experience || [],
   });
+
+  // Fetch login history on mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const { data } = await api.get('/auth/login-history');
+        setLoginHistory(data.history || []);
+      } catch (_) {}
+      setLoadingHistory(false);
+    };
+    fetchHistory();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -377,6 +392,60 @@ const ProfilePage = () => {
               {savingPw ? 'Saving...' : 'Update Password'}
             </button>
           </form>
+        </div>
+
+        {/* ── Login History ── */}
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ClockIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">Login History</h2>
+          </div>
+          {loadingHistory ? (
+            <p className="text-gray-400 text-sm">Loading...</p>
+          ) : loginHistory.length === 0 ? (
+            <p className="text-gray-400 text-sm">No login history available.</p>
+          ) : (
+            <div className="space-y-3">
+              {loginHistory.map((entry) => (
+                <div key={entry._id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className={`p-2 rounded-lg flex-shrink-0 ${
+                    entry.deviceType === 'mobile' ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'
+                  }`}>
+                    {entry.deviceType === 'mobile'
+                      ? <DevicePhoneMobileIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      : <ComputerDesktopIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {entry.browser} {entry.browserVersion && `(${entry.browserVersion.split('.')[0]})`}
+                        {' · '}{entry.os}
+                      </p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        entry.status === 'success' || entry.status === 'otp_verified'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : entry.status === 'blocked_time'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}>
+                        {entry.status === 'success' ? '✓ Success'
+                          : entry.status === 'otp_verified' ? '✓ OTP Verified'
+                          : entry.status === 'blocked_time' ? '✗ Blocked (Time)'
+                          : '⏳ OTP Pending'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {entry.deviceType} · IP: {entry.ipAddress}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(entry.loginAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

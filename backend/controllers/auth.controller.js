@@ -5,12 +5,58 @@
 
 const crypto           = require('crypto');
 const { validationResult } = require('express-validator');
+const UAParser         = require('ua-parser-js');
 const User             = require('../models/User');
 const OTP              = require('../models/OTP');
+const LoginHistory     = require('../models/LoginHistory');
 const issueAccessToken = require('../utils/generateToken');
-const { sendSignupOTP, sendPasswordResetEmail } = require('../utils/sendEmail');
+const { sendSignupOTP, sendPasswordResetEmail, dispatchEmail } = require('../utils/sendEmail');
 
 const makePasscode = () => crypto.randomInt(100000, 999999).toString();
+
+/* ── Parse device info from User-Agent ── */
+const parseDeviceInfo = (userAgentStr, ipAddress) => {
+  const parser  = new UAParser(userAgentStr || '');
+  const result  = parser.getResult();
+
+  const browser = result.browser.name || 'Unknown';
+  const browserVersion = result.browser.version || '';
+  const os      = result.os.name || 'Unknown';
+
+  // Determine device type
+  let deviceType = 'desktop';
+  const deviceKind = (result.device.type || '').toLowerCase();
+  if (deviceKind === 'mobile')  deviceType = 'mobile';
+  else if (deviceKind === 'tablet') deviceType = 'tablet';
+  else if (userAgentStr?.toLowerCase().includes('mobile')) deviceType = 'mobile';
+
+  return { browser, browserVersion, os, deviceType };
+};
+
+/* ── Send Chrome login OTP ── */
+const sendChromeLoginOTP = async (email, otp) => {
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+      <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:30px;border-radius:12px 12px 0 0;text-align:center;">
+        <h1 style="color:#fff;margin:0;font-size:26px;">CareerBridge</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:6px 0 0;font-size:14px;">Chrome Browser Login Verification</p>
+      </div>
+      <div style="background:#fafafa;padding:30px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;">
+        <h2 style="color:#111827;margin-top:0;">Verify Your Chrome Login</h2>
+        <p style="color:#6b7280;font-size:15px;line-height:1.6;">
+          A login attempt was detected from <strong>Google Chrome</strong>. 
+          Please verify your identity with the code below to complete sign-in.
+        </p>
+        <div style="background:#fff;border:2px dashed #4f46e5;border-radius:10px;padding:22px;text-align:center;margin:24px 0;">
+          <span style="font-size:38px;font-weight:700;letter-spacing:10px;color:#4f46e5;">${otp}</span>
+        </div>
+        <p style="color:#9ca3af;font-size:13px;">⏰ This code expires in <strong>10 minutes</strong>.</p>
+        <p style="color:#ef4444;font-size:13px;font-weight:600;">If you did not attempt to log in, please secure your account immediately.</p>
+      </div>
+    </div>
+  `;
+  await dispatchEmail(email, 'Chrome Login Verification — CareerBridge', html);
+};
 
 /**
  * Generates a random password using only uppercase and lowercase letters.
@@ -222,7 +268,88 @@ exports.signIn = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    /* ── Parse device info ── */
+    const userAgentStr = req.headers['user-agent'] || '';
+    const ipAddress    = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                      || req.socket?.remoteAddress
+                      || 'Unknown';
+    const { browser, browserVersion, os, deviceType } = parseDeviceInfo(userAgentStr, ipAddress);
+
+    /* ── Security Rule 1: Mobile time restriction (10 AM – 1 PM IST) ── */
+    if (deviceType === 'mobile') {
+      const now = new Date();
+      // Convert to IST (UTC+5:30)
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime   = new Date(now.getTime() + istOffset);
+      const istHour   = istTime.getUTCHours();
+      const istMin    = istTime.getUTCMinutes();
+      const totalMins = istHour * 60 + istMin;
+      const allowStart = 10 * 60;  // 10:00 AM
+      const allowEnd   = 13 * 60;  // 1:00 PM
+
+      if (totalMins < allowStart || totalMins >= allowEnd) {
+        // Log blocked attempt
+        await LoginHistory.create({
+          userId: account._id, ipAddress, browser, browserVersion,
+          os, deviceType, userAgent: userAgentStr, status: 'blocked_time',
+        });
+
+        const currentIST = `${String(istHour).padStart(2,'0')}:${String(istMin).padStart(2,'0')} IST`;
+        return res.status(403).json({
+          success    : false,
+          blocked    : true,
+          blockReason: 'mobile_time',
+          message    : `Mobile login is only allowed between 10:00 AM and 1:00 PM IST. Current time: ${currentIST}`,
+          currentTime: currentIST,
+          allowWindow: '10:00 AM – 1:00 PM IST',
+        });
+      }
+    }
+
+    /* ── Security Rule 2: Chrome requires OTP verification ── */
+    const isChrome = browser?.toLowerCase().includes('chrome')
+                  && !browser?.toLowerCase().includes('edge')
+                  && !browser?.toLowerCase().includes('opr');
+
+    if (isChrome) {
+      // Send OTP and return pending status
+      await OTP.deleteMany({ recipientEmail: account.emailAddress, useCase: 'chrome-login' });
+
+      const code = makePasscode();
+      await OTP.create({
+        recipientEmail: account.emailAddress,
+        code,
+        useCase  : 'chrome-login',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      });
+
+      await sendChromeLoginOTP(account.emailAddress, code);
+
+      // Log pending OTP attempt
+      await LoginHistory.create({
+        userId: account._id, ipAddress, browser, browserVersion,
+        os, deviceType, userAgent: userAgentStr, status: 'pending_otp',
+      });
+
+      return res.json({
+        success      : false,
+        requiresOTP  : true,
+        otpSent      : true,
+        email        : account.emailAddress,
+        message      : `A verification code has been sent to ${account.emailAddress}. Please enter it to complete sign-in.`,
+        browser,
+        deviceType,
+      });
+    }
+
+    /* ── Standard login — issue token ── */
     const token = issueAccessToken(account._id);
+
+    // Log successful login
+    await LoginHistory.create({
+      userId: account._id, ipAddress, browser, browserVersion,
+      os, deviceType, userAgent: userAgentStr, status: 'success',
+    });
 
     return res.json({
       success: true,
@@ -240,6 +367,81 @@ exports.signIn = async (req, res) => {
     });
   } catch (err) {
     console.error('signIn error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/* ── Verify Chrome login OTP ──────────────────────────── */
+exports.verifyChromeOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    const account = await User.findOne({ emailAddress: email.toLowerCase() });
+    if (!account) {
+      return res.status(404).json({ success: false, message: 'Account not found' });
+    }
+
+    const record = await OTP.findOne({
+      recipientEmail: email.toLowerCase(),
+      useCase       : 'chrome-login',
+      consumed      : false,
+    });
+
+    if (!record) {
+      return res.status(400).json({ success: false, message: 'OTP not found. Please try logging in again.' });
+    }
+    if (new Date() > record.expiresAt) {
+      await record.deleteOne();
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please try logging in again.' });
+    }
+    if (record.code !== otp.toString()) {
+      return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
+    }
+
+    record.consumed = true;
+    await record.save();
+
+    // Update the pending login history entry to verified
+    await LoginHistory.findOneAndUpdate(
+      { userId: account._id, status: 'pending_otp' },
+      { status: 'otp_verified' },
+      { sort: { loginAt: -1 } }
+    );
+
+    const token = issueAccessToken(account._id);
+
+    return res.json({
+      success: true,
+      message: 'Chrome login verified successfully',
+      token,
+      user: {
+        _id             : account._id,
+        name            : account.fullName,
+        email           : account.emailAddress,
+        role            : account.accountRole,
+        languagePreference: account.preferredLanguage,
+        companyName     : account.organisationName,
+        profilePicture  : account.avatarUrl,
+      },
+    });
+  } catch (err) {
+    console.error('verifyChromeOTP error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/* ── Get login history ────────────────────────────────── */
+exports.getLoginHistory = async (req, res) => {
+  try {
+    const history = await LoginHistory.find({ userId: req.user._id })
+      .sort('-loginAt')
+      .limit(20);
+
+    return res.json({ success: true, history });
+  } catch (err) {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
