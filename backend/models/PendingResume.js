@@ -1,0 +1,19 @@
+/**
+ * Temporary storage for resume data during payment flow.
+ * Auto-deleted after 1 hour via TTL index.
+ */
+
+const mongoose = require('mongoose');
+
+const pendingResumeSchema = new mongoose.Schema({
+  userId    : { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  orderId   : { type: String },
+  resumeData: { type: mongoose.Schema.Types.Mixed, required: true },
+  createdAt : { type: Date, default: Date.now },
+  expiresAt : { type: Date, default: () => new Date(Date.now() + 60 * 60 * 1000) },
+});
+
+pendingResumeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+pendingResumeSchema.index({ userId: 1 }, { unique: true });
+
+module.exports = mongoose.model('PendingResume', pendingResumeSchema);

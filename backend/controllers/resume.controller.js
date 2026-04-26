@@ -10,16 +10,16 @@ const crypto          = require('crypto');
 const Razorpay        = require('razorpay');
 const OTP             = require('../models/OTP');
 const User            = require('../models/User');
+const PendingResume   = require('../models/PendingResume');
 const generateResumePDF = require('../utils/generateResumePDF');
 const { dispatchEmail } = require('../utils/sendEmail');
 const { cloudinary }  = require('../utils/cloudinary');
 
 const RESUME_FEE_PAISE = parseInt(process.env.RESUME_FEE_PAISE || '5000', 10);
 
-/* Lazy Razorpay init — avoids crash if keys not set at startup */
 const getRazorpay = () => {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-    throw new Error('Razorpay keys are not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.');
+    throw new Error('Razorpay keys are not configured.');
   }
   return new Razorpay({
     key_id    : process.env.RAZORPAY_KEY_ID,
@@ -94,13 +94,14 @@ exports.sendResumeOTP = async (req, res) => {
 exports.createResumeOrder = async (req, res) => {
   try {
     const { otp, resumeData } = req.body;
-    const email = req.user.emailAddress;
+    const email  = req.user.emailAddress;
+    const userId = req.user._id;
 
     if (!otp) {
       return res.status(400).json({ success: false, message: 'OTP is required.' });
     }
 
-    // Validate OTP
+    // ── Validate OTP ──
     const record = await OTP.findOne({
       recipientEmail: email,
       useCase       : 'resume-payment',
@@ -118,37 +119,23 @@ exports.createResumeOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
     }
 
-    // Mark OTP consumed
     record.consumed = true;
     await record.save();
 
-    // Create Razorpay order
+    // ── Create Razorpay order ──
     const razorpay = getRazorpay();
     const order = await razorpay.orders.create({
       amount  : RESUME_FEE_PAISE,
       currency: 'INR',
-      receipt : `resume_${req.user._id}_${Date.now()}`,
-      notes   : {
-        userId    : req.user._id.toString(),
-        userEmail : email,
-        purpose   : 'premium-resume',
-      },
+      receipt : `resume_${userId}_${Date.now()}`,
+      notes   : { userId: userId.toString(), userEmail: email, purpose: 'premium-resume' },
     });
 
-    // Store resume data temporarily in OTP notes (reuse record)
-    await OTP.create({
-      recipientEmail: email,
-      code          : order.id, // store order ID as "code"
-      useCase       : 'resume-payment',
-      consumed      : false,
-      expiresAt     : new Date(Date.now() + 30 * 60 * 1000), // 30 min to complete payment
-    });
-
-    // Store resume data on user document using strict:false workaround
-    await User.findByIdAndUpdate(
-      req.user._id,
-      { pendingResumeData: JSON.stringify(resumeData) },
-      { strict: false }
+    // ── Store resume data in dedicated collection ──
+    await PendingResume.findOneAndUpdate(
+      { userId },
+      { userId, orderId: order.id, resumeData, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+      { upsert: true, new: true }
     );
 
     return res.json({
@@ -160,10 +147,9 @@ exports.createResumeOrder = async (req, res) => {
     });
   } catch (err) {
     console.error('createResumeOrder error:', err);
-    return res.status(500).json({
-      success: false,
-      message: err.message || 'Failed to create payment order.',
-    });
+    // Return the actual Razorpay error description if available
+    const msg = err?.error?.description || err?.message || 'Failed to create payment order.';
+    return res.status(500).json({ success: false, message: msg });
   }
 };
 
@@ -182,13 +168,13 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Payment verification failed. Invalid signature.' });
     }
 
-    // Fetch user and their pending resume data
-    const account = await User.findById(req.user._id);
-    if (!account.pendingResumeData) {
+    // Fetch pending resume data from dedicated collection
+    const pending = await PendingResume.findOne({ userId: req.user._id });
+    if (!pending) {
       return res.status(400).json({ success: false, message: 'Resume data not found. Please start over.' });
     }
 
-    const resumeData = JSON.parse(account.pendingResumeData);
+    const resumeData = pending.resumeData;
 
     // Generate PDF
     const pdfBuffer = await generateResumePDF(resumeData);
@@ -210,14 +196,14 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
       stream.end(pdfBuffer);
     });
 
-    // Attach resume URL to user profile + clear pending data
-    await User.findByIdAndUpdate(
-      req.user._id,
-      { cvFileUrl: uploadResult.secure_url, cvPublicId: uploadResult.public_id, pendingResumeData: null },
-      { strict: false }
-    );
+    // Attach resume URL to user profile
+    await User.findByIdAndUpdate(req.user._id, {
+      cvFileUrl : uploadResult.secure_url,
+      cvPublicId: uploadResult.public_id,
+    });
 
-    // Clean up OTP record
+    // Clean up pending resume data and OTP records
+    await PendingResume.deleteOne({ userId: req.user._id });
     await OTP.deleteMany({ recipientEmail: req.user.emailAddress, useCase: 'resume-payment' });
 
     // Send confirmation email
