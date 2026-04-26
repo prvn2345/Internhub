@@ -192,6 +192,7 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
             resource_type: 'raw',
             public_id    : `resume_${req.user._id}_${Date.now()}`,
             format       : 'pdf',
+            type         : 'upload',
           },
           (error, result) => {
             if (error) reject(error);
@@ -200,7 +201,8 @@ exports.verifyPaymentAndGenerate = async (req, res) => {
         );
         stream.end(pdfBuffer);
       });
-      resumeUrl  = uploadResult.secure_url;
+      // Use fl_attachment so browser downloads instead of trying to render inline
+      resumeUrl  = uploadResult.secure_url.replace('/upload/', '/upload/fl_attachment/');
       cvPublicId = uploadResult.public_id;
     } else {
       // Cloudinary not configured — store as base64 data URL

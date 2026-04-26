@@ -188,13 +188,23 @@ const ResumeBuilderPage = () => {
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         {resumeUrl && (
-          <a href={resumeUrl} target="_blank" rel="noopener noreferrer"
-             className="btn-primary px-6 py-3 font-semibold flex items-center justify-center gap-2">
-            <DocumentTextIcon className="w-5 h-5" /> View / Download Resume
+          <a
+            href={resumeUrl}
+            download="CareerBridge_Resume.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary px-6 py-3 font-semibold flex items-center justify-center gap-2"
+          >
+            <DocumentTextIcon className="w-5 h-5" /> Download Resume (PDF)
           </a>
         )}
         <Link to="/profile" className="btn-secondary px-6 py-3 font-semibold">Go to Profile</Link>
       </div>
+      {resumeUrl && (
+        <p className="text-gray-400 text-xs mt-4">
+          Your resume is also saved in your profile and will be used for all future applications.
+        </p>
+      )}
     </div>
   );
 
