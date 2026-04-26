@@ -255,21 +255,40 @@ exports.downloadResume = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Find the resume - no strict user check since URL is user-specific
     const pending = await PendingResume.findOne({ userId });
-    if (!pending || !pending.generatedPDF) {
-      return res.status(404).send('Resume not found. Please generate a new one from the Resume Builder.');
+
+    // If we have a stored PDF, stream it
+    if (pending && pending.generatedPDF) {
+      const pdfBuffer = Buffer.from(pending.generatedPDF, 'base64');
+      res.set({
+        'Content-Type'       : 'application/pdf',
+        'Content-Disposition': 'attachment; filename="CareerBridge_Resume.pdf"',
+        'Content-Length'     : pdfBuffer.length,
+      });
+      return res.send(pdfBuffer);
     }
 
-    const pdfBuffer = Buffer.from(pending.generatedPDF, 'base64');
+    // If we have resume data but no PDF yet, regenerate it
+    if (pending && pending.resumeData) {
+      const pdfBuffer = await generateResumePDF(pending.resumeData);
+      const base64PDF = pdfBuffer.toString('base64');
 
-    res.set({
-      'Content-Type'       : 'application/pdf',
-      'Content-Disposition': 'attachment; filename="CareerBridge_Resume.pdf"',
-      'Content-Length'     : pdfBuffer.length,
-    });
+      // Save for future downloads
+      await PendingResume.findOneAndUpdate(
+        { userId },
+        { generatedPDF: base64PDF },
+        { new: true }
+      );
 
-    return res.send(pdfBuffer);
+      res.set({
+        'Content-Type'       : 'application/pdf',
+        'Content-Disposition': 'attachment; filename="CareerBridge_Resume.pdf"',
+        'Content-Length'     : pdfBuffer.length,
+      });
+      return res.send(pdfBuffer);
+    }
+
+    return res.status(404).send('Resume not found. Please generate a new one from the Resume Builder.');
   } catch (err) {
     console.error('downloadResume error:', err);
     return res.status(500).send('Failed to download resume.');
