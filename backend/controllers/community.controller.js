@@ -18,21 +18,23 @@ const multer     = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 /* ── Cloudinary storage for community media ── */
-const communityStorage = new CloudinaryStorage({
-  cloudinary,
-  params: async (_req, file) => ({
-    folder        : 'careerbridge/community',
-    resource_type : file.mimetype.startsWith('video') ? 'video' : 'image',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov', 'avi'],
-    transformation : file.mimetype.startsWith('video')
-      ? [{ width: 1280, height: 720, crop: 'limit' }]
-      : [{ width: 1080, height: 1080, crop: 'limit', quality: 'auto' }],
-  }),
-});
+let communityStorage;
+try {
+  communityStorage = new CloudinaryStorage({
+    cloudinary,
+    params: async (_req, file) => ({
+      folder        : 'careerbridge/community',
+      resource_type : file.mimetype.startsWith('video') ? 'video' : 'image',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov'],
+    }),
+  });
+} catch (e) {
+  console.warn('Community Cloudinary storage init failed:', e.message);
+}
 
 exports.communityUpload = multer({
-  storage: communityStorage,
-  limits : { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  storage: communityStorage || multer.memoryStorage(),
+  limits : { fileSize: 50 * 1024 * 1024 },
 });
 
 /* ── Helper: get friend count for a user ── */
@@ -273,9 +275,17 @@ exports.createPost = async (req, res) => {
     };
 
     if (req.file) {
-      postData.mediaUrl      = req.file.path;
-      postData.mediaPublicId = req.file.filename;
-      postData.mediaType     = req.file.mimetype?.startsWith('video') ? 'video' : 'image';
+      // If Cloudinary upload succeeded (file has path), use it
+      if (req.file.path) {
+        postData.mediaUrl      = req.file.path;
+        postData.mediaPublicId = req.file.filename;
+        postData.mediaType     = req.file.mimetype?.startsWith('video') ? 'video' : 'image';
+      } else if (req.file.buffer) {
+        // Fallback: convert to base64 data URL
+        const mime = req.file.mimetype || 'image/jpeg';
+        postData.mediaUrl  = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+        postData.mediaType = mime.startsWith('video') ? 'video' : 'image';
+      }
     }
 
     const post = await Post.create(postData);
@@ -285,7 +295,7 @@ exports.createPost = async (req, res) => {
     return res.status(201).json({ success: true, post: normalisePost(populated, userId) });
   } catch (err) {
     console.error('createPost error:', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Server error' });
   }
 };
 
