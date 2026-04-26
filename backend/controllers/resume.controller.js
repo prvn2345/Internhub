@@ -127,7 +127,7 @@ exports.createResumeOrder = async (req, res) => {
     const order = await razorpay.orders.create({
       amount  : RESUME_FEE_PAISE,
       currency: 'INR',
-      receipt : `resume_${userId}_${Date.now()}`,
+      receipt : `res_${userId.toString().slice(-8)}_${Date.now().toString().slice(-8)}`,
       notes   : { userId: userId.toString(), userEmail: email, purpose: 'premium-resume' },
     });
 
