@@ -108,7 +108,16 @@ exports.sendSignupPasscode = async (req, res) => {
     });
 
     await sendSignupOTP(email, code);
-    return res.json({ success: true, message: `Verification code sent to ${email}` });
+
+    // In development/test mode, also return OTP in response for non-owner emails
+    const isOwnerEmail = email.toLowerCase() === process.env.EMAIL_USER?.toLowerCase();
+    const responseData = { success: true, message: `Verification code sent to ${email}` };
+    if (!isOwnerEmail) {
+      // Resend free tier can't send to other emails — show OTP on screen
+      responseData.devOtp = code;
+      responseData.message = `Email delivery restricted in test mode. Your OTP is shown below.`;
+    }
+    return res.json(responseData);
 
   } catch (err) {
     console.error('sendSignupPasscode error:', err);

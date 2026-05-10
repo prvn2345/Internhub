@@ -127,10 +127,15 @@ const RegisterPage = () => {
       toast.loading('Server is waking up, please wait up to 30 seconds...', { id: 'wakeup' });
     }, 5000);
     try {
-      await api.post('/auth/send-register-otp', { email: form.email });
+      const { data } = await api.post('/auth/send-register-otp', { email: form.email });
       clearTimeout(wakeupTimer);
       toast.dismiss('wakeup');
-      toast.success(`OTP sent to ${form.email}`);
+      if (data.devOtp) {
+        // Test mode — OTP shown on screen
+        toast.success(`Your OTP: ${data.devOtp}`, { duration: 30000 });
+      } else {
+        toast.success(`OTP sent to ${form.email}`);
+      }
       setStep(2);
       setCountdown(60);
     } catch (error) {
