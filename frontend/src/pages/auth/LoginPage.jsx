@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   EyeIcon, EyeSlashIcon, ShieldCheckIcon,
-  ClockIcon, ExclamationTriangleIcon, EnvelopeIcon,
+  ClockIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
@@ -46,7 +46,6 @@ const OTPBoxes = ({ otp, setOtp }) => {
 const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isBusy: isLoading, setCurrentUser, accessToken } = useAuthStore();
 
   const [form, setForm]             = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -66,28 +65,29 @@ const LoginPage = () => {
     else navigate('/dashboard');
   };
 
+  /* ── Login submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+
+    // Show wakeup message after 5s if server is sleeping
     const wakeupTimer = setTimeout(() => {
       toast.loading('Server is waking up, please wait...', { id: 'wakeup-login' });
     }, 5000);
+
     try {
       const { data } = await apiClient.post('/auth/login', form);
       clearTimeout(wakeupTimer);
       toast.dismiss('wakeup-login');
 
       if (data.requiresOTP) {
-        // Chrome browser — needs OTP
         setOtpEmail(data.email);
         setStage('chrome-otp');
         toast.success(data.message);
       } else if (data.blocked && data.blockReason === 'mobile_time') {
-        // Mobile time restriction
         setBlockInfo(data);
         setStage('mobile-blocked');
       } else if (data.success) {
-        // Normal login
         useAuthStore.setState({ currentUser: data.user, accessToken: data.token });
         toast.success('Welcome back!');
         redirectAfterLogin(data.user);
@@ -104,9 +104,13 @@ const LoginPage = () => {
       } else {
         toast.error(res?.message || 'Invalid credentials');
       }
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-  }; = async () => {
+  };
+
+  /* ── Chrome OTP verify ── */
+  const handleVerifyOTP = async () => {
     const code = otp.join('');
     if (code.length !== 6) { toast.error('Enter the complete 6-digit OTP'); return; }
     setVerifying(true);
@@ -120,8 +124,9 @@ const LoginPage = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid OTP');
       setOtp(['','','','','','']);
+    } finally {
+      setVerifying(false);
     }
-    setVerifying(false);
   };
 
   /* ── Mobile time blocked screen ── */
@@ -153,7 +158,7 @@ const LoginPage = () => {
               </p>
             </div>
             <p className="text-gray-400 text-xs mb-5">
-              For security, mobile logins are restricted to business hours. Please try again during the allowed window or use a desktop browser.
+              Mobile logins are restricted to business hours. Please try again during the allowed window or use a desktop browser.
             </p>
             <button onClick={() => setStage('form')} className="btn-secondary w-full">
               ← Try Different Device
@@ -200,7 +205,7 @@ const LoginPage = () => {
             </button>
 
             <button onClick={() => { setStage('form'); setOtp(['','','','','','']); }}
-              className="mt-3 text-sm text-gray-500 hover:text-primary-600 transition-colors">
+              className="mt-3 text-sm text-gray-500 hover:text-primary-600 transition-colors block w-full">
               ← Back to Login
             </button>
           </div>
