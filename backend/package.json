@@ -24,6 +24,7 @@
     "nodemailer": "^6.9.7",
     "pdfkit": "^0.18.0",
     "razorpay": "^2.9.6",
+    "resend": "^6.12.3",
     "ua-parser-js": "^2.0.9"
   },
   "devDependencies": {
