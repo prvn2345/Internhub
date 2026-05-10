@@ -6,14 +6,17 @@
 const nodemailer = require('nodemailer');
 
 const smtpTransport = nodemailer.createTransport({
-  host  : process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port  : parseInt(process.env.EMAIL_PORT, 10) || 587,
-  secure: false,
-  auth  : {
+  host            : process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port            : parseInt(process.env.EMAIL_PORT, 10) || 587,
+  secure          : false,
+  auth            : {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: { rejectUnauthorized: false },
+  tls             : { rejectUnauthorized: false },
+  connectionTimeout: 10000,   // 10 seconds to connect
+  greetingTimeout : 10000,    // 10 seconds for SMTP greeting
+  socketTimeout   : 30000,    // 30 seconds for socket operations
 });
 
 /* Verify SMTP credentials on startup */
