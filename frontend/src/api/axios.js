@@ -13,6 +13,7 @@ const BASE_URL =
 const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 60000, // 60 seconds — allows Render free tier to wake up
 });
 
 /* Attach Bearer token from persisted Zustand store */

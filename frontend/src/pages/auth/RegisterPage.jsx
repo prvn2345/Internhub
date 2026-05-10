@@ -122,13 +122,21 @@ const RegisterPage = () => {
       return;
     }
     setSendingOTP(true);
+    // Show "waking up server" message after 5 seconds if still loading
+    const wakeupTimer = setTimeout(() => {
+      toast.loading('Server is waking up, please wait up to 30 seconds...', { id: 'wakeup' });
+    }, 5000);
     try {
       await api.post('/auth/send-register-otp', { email: form.email });
+      clearTimeout(wakeupTimer);
+      toast.dismiss('wakeup');
       toast.success(`OTP sent to ${form.email}`);
       setStep(2);
       setCountdown(60);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to send OTP');
+      clearTimeout(wakeupTimer);
+      toast.dismiss('wakeup');
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setSendingOTP(false);
     }

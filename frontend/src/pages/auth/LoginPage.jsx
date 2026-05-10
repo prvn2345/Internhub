@@ -69,8 +69,13 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    const wakeupTimer = setTimeout(() => {
+      toast.loading('Server is waking up, please wait...', { id: 'wakeup-login' });
+    }, 5000);
     try {
       const { data } = await apiClient.post('/auth/login', form);
+      clearTimeout(wakeupTimer);
+      toast.dismiss('wakeup-login');
 
       if (data.requiresOTP) {
         // Chrome browser — needs OTP
@@ -90,6 +95,8 @@ const LoginPage = () => {
         toast.error(data.message || 'Login failed');
       }
     } catch (err) {
+      clearTimeout(wakeupTimer);
+      toast.dismiss('wakeup-login');
       const res = err.response?.data;
       if (res?.blocked && res?.blockReason === 'mobile_time') {
         setBlockInfo(res);
@@ -99,9 +106,7 @@ const LoginPage = () => {
       }
     }
     setSubmitting(false);
-  };
-
-  const handleVerifyOTP = async () => {
+  }; = async () => {
     const code = otp.join('');
     if (code.length !== 6) { toast.error('Enter the complete 6-digit OTP'); return; }
     setVerifying(true);
