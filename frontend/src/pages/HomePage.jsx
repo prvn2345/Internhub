@@ -41,7 +41,7 @@ const HomePage = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-600 via-primary-700 to-purple-700 text-white py-20 px-4">
+      <section className="bg-gradient-to-br from-primary-600 via-primary-700 to-teal-700 text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
             {t('home.hero.title')}

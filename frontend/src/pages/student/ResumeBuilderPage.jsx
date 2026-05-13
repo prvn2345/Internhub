@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   SparklesIcon, PlusIcon, TrashIcon, CheckCircleIcon,
@@ -389,7 +389,7 @@ const ResumeBuilderPage = () => {
           </div>
         </div>
 
-        <div className="card p-6 bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20">
+        <div className="card p-6 bg-gradient-to-r from-primary-50 to-teal-50 dark:from-primary-900/20 dark:to-teal-900/20">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold text-gray-900 dark:text-white">Ready to generate your resume?</p>

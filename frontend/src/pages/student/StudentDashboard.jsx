@@ -177,7 +177,7 @@ const StudentDashboard = () => {
           </Link>
           <Link to="/plans"
             className="card p-4 flex items-center gap-3 hover:shadow-md transition-shadow
-                       bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20
+                       bg-gradient-to-r from-primary-50 to-teal-50 dark:from-primary-900/20 dark:to-teal-900/20
                        border-primary-200 dark:border-primary-800 block mt-3">
             <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
               <BriefcaseIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
