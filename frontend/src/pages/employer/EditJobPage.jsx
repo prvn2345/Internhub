@@ -1,133 +1,122 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { PageLoader } from '../../components/common/LoadingSpinner';
 
-const CATEGORIES = [
-  'Technology', 'Marketing', 'Finance', 'Design', 'Sales',
-  'HR', 'Operations', 'Content', 'Data Science', 'Engineering',
-];
+const VALID_DOMAINS = ['Technology', 'Marketing', 'Finance', 'Design', 'Sales', 'HR', 'Operations', 'Content', 'Data Science', 'Engineering'];
 
 const EditJobPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [newSkill, setNewSkill] = useState('');
+  const { id: jobId } = useParams();
+  const router = useNavigate();
+  const [jobData, setJobData] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isCommitting, setIsCommitting] = useState(false);
+  const [skillInput, setSkillInput] = useState('');
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchExistingJob = async () => {
       try {
-        const { data } = await api.get(`/jobs/${id}`);
-        const job = data.job;
-        setForm({
-          title: job.title, type: job.type, category: job.category,
-          location: job.location, isRemote: job.isRemote, description: job.description,
-          stipend: job.stipend, duration: job.duration, openings: job.openings,
-          applicationDeadline: job.applicationDeadline?.split('T')[0] || '',
-          skills: job.skills || [], responsibilities: job.responsibilities || [],
-          requirements: job.requirements || [], status: job.status,
+        const { data } = await api.get(`/jobs/${jobId}`);
+        const sourceJob = data.job;
+        setJobData({
+          title: sourceJob.title, type: sourceJob.type, category: sourceJob.category, location: sourceJob.location, isRemote: sourceJob.isRemote,
+          description: sourceJob.description, stipend: sourceJob.stipend, duration: sourceJob.duration, openings: sourceJob.openings,
+          applicationDeadline: sourceJob.applicationDeadline?.split('T')[0] || '', skills: sourceJob.skills || [], responsibilities: sourceJob.responsibilities || [],
+          requirements: sourceJob.requirements || [], status: sourceJob.status,
         });
-      } catch (_) { navigate('/employer/dashboard'); }
-      setLoading(false);
+      } catch (err) { router('/employer/dashboard'); }
+      setIsInitializing(false);
     };
-    fetch();
-  }, [id, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchExistingJob();
+  }, [jobId, router]);
 
-  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const modifyField = (field, val) => setJobData(prev => ({ ...prev, [field]: val }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+  const pushModifications = async (ev) => {
+    ev.preventDefault();
+    setIsCommitting(true);
     try {
-      await api.put(`/jobs/${id}`, form);
-      toast.success('Job updated!');
-      navigate('/employer/dashboard');
-    } catch (_) {
-      toast.error('Failed to update job');
-    }
-    setSaving(false);
+      await api.put(`/jobs/${jobId}`, jobData);
+      toast.success('Opportunity configuration updated');
+      router('/employer/dashboard');
+    } catch (err) { toast.error('Failed to sync updates'); }
+    setIsCommitting(false);
   };
 
-  if (loading || !form) return <PageLoader />;
+  if (isInitializing || !jobData) return <PageLoader />;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit Job</h1>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">Modify Opportunity</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="card p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Job Title</label>
-              <input type="text" required value={form.title} onChange={(e) => update('title', e.target.value)} className="input-field" />
+      <form onSubmit={pushModifications} className="space-y-8">
+        <div className="card p-8 space-y-5 border-t-4 border-t-primary-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Designation Title</label>
+              <input type="text" required value={jobData.title} onChange={e => modifyField('title', e.target.value)} className="input-field py-2.5" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Status</label>
-              <select value={form.status} onChange={(e) => update('status', e.target.value)} className="input-field">
-                <option value="active">Active</option>
-                <option value="closed">Closed</option>
-                <option value="draft">Draft</option>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Current State</label>
+              <select value={jobData.status} onChange={e => modifyField('status', e.target.value)} className="input-field py-2.5 bg-gray-50 dark:bg-gray-800">
+                <option value="active">Live & Accepting</option><option value="closed">Halted / Closed</option><option value="draft">Draft Mode</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
-              <select value={form.category} onChange={(e) => update('category', e.target.value)} className="input-field">
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Industry Domain</label>
+              <select value={jobData.category} onChange={e => modifyField('category', e.target.value)} className="input-field py-2.5">
+                {VALID_DOMAINS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Location</label>
-              <input type="text" value={form.location} onChange={(e) => update('location', e.target.value)} className="input-field" />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Geographic Base</label>
+              <input type="text" value={jobData.location} onChange={e => modifyField('location', e.target.value)} className="input-field py-2.5" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Duration</label>
-              <input type="text" value={form.duration} onChange={(e) => update('duration', e.target.value)} className="input-field" />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Engagement Length</label>
+              <input type="text" value={jobData.duration} onChange={e => modifyField('duration', e.target.value)} className="input-field py-2.5" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Stipend (₹/month)</label>
-              <input type="number" min="0" value={form.stipend} onChange={(e) => update('stipend', Number(e.target.value))} className="input-field" />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Compensation (₹/mo)</label>
+              <input type="number" min="0" value={jobData.stipend} onChange={e => modifyField('stipend', Number(e.target.value))} className="input-field py-2.5" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Application Deadline</label>
-              <input type="date" value={form.applicationDeadline} onChange={(e) => update('applicationDeadline', e.target.value)} className="input-field" />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Closure Deadline</label>
+              <input type="date" value={jobData.applicationDeadline} onChange={e => modifyField('applicationDeadline', e.target.value)} className="input-field py-2.5" />
             </div>
           </div>
         </div>
 
-        <div className="card p-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Description</label>
-          <textarea value={form.description} onChange={(e) => update('description', e.target.value)} rows={6} className="input-field resize-none" />
+        <div className="card p-8 border-t-4 border-t-blue-500">
+          <label className="block text-base font-bold text-gray-900 dark:text-white mb-3">Detailed Brief</label>
+          <textarea value={jobData.description} onChange={e => modifyField('description', e.target.value)} rows={7} className="input-field resize-none py-3" />
         </div>
 
-        <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Skills</h2>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {form.skills.map((skill, i) => (
-              <span key={i} className="flex items-center gap-1.5 px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-full text-sm">
-                {skill}
-                <button type="button" onClick={() => update('skills', form.skills.filter((_, idx) => idx !== i))}><TrashIcon className="w-3 h-3" /></button>
+        <div className="card p-8 border-t-4 border-t-purple-500">
+          <h2 className="font-bold text-gray-900 dark:text-white mb-4">Competency Tokens</h2>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {jobData.skills.map((s, i) => (
+              <span key={i} className="flex items-center gap-1.5 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg text-sm font-medium">
+                {s} <button type="button" onClick={() => modifyField('skills', jobData.skills.filter((_, idx) => idx !== i))} className="hover:text-red-500"><TrashIcon className="w-3.5 h-3.5" /></button>
               </span>
             ))}
           </div>
           <div className="flex gap-2">
-            <input type="text" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newSkill.trim()) { update('skills', [...form.skills, newSkill.trim()]); setNewSkill(''); } } }} placeholder="Add skill..." className="input-field text-sm flex-1" />
-            <button type="button" onClick={() => { if (newSkill.trim()) { update('skills', [...form.skills, newSkill.trim()]); setNewSkill(''); } }} className="btn-secondary text-sm px-3"><PlusIcon className="w-4 h-4" /></button>
+            <input type="text" value={skillInput} onChange={e => setSkillInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (skillInput.trim()) { modifyField('skills', [...jobData.skills, skillInput.trim()]); setSkillInput(''); } } }} placeholder="Define skill..." className="input-field text-sm flex-1" />
+            <button type="button" onClick={() => { if (skillInput.trim()) { modifyField('skills', [...jobData.skills, skillInput.trim()]); setSkillInput(''); } }} className="btn-secondary px-4"><PlusIcon className="w-5 h-5" /></button>
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button type="button" onClick={() => navigate('/employer/dashboard')} className="btn-secondary flex-1">Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary flex-1 py-3 font-semibold">
-            {saving ? 'Saving...' : 'Save Changes'}
+        <div className="flex justify-end gap-4 pt-4">
+          <button type="button" onClick={() => router('/employer/dashboard')} className="btn-secondary px-8 py-3 font-semibold">Discard Modifications</button>
+          <button type="submit" disabled={isCommitting} className="btn-primary px-10 py-3 font-bold text-lg shadow-md hover:shadow-lg transition-all">
+            {isCommitting ? 'Syncing Nodes...' : 'Commit Updates'}
           </button>
         </div>
       </form>
     </div>
   );
 };
-
 export default EditJobPage;

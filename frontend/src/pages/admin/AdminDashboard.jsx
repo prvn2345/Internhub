@@ -1,122 +1,111 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  UsersIcon, BriefcaseIcon, DocumentTextIcon, CheckCircleIcon,
-} from '@heroicons/react/24/outline';
+import { UsersIcon, BriefcaseIcon, DocumentTextIcon, CheckCircleIcon, IdentificationIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import { PageLoader } from '../../components/common/LoadingSpinner';
 
 const AdminDashboard = () => {
   const { t } = useTranslation();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [telemetry, setTelemetry] = useState(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchPlatformStats = async () => {
       try {
-        const { data: res } = await api.get('/admin/stats');
-        setData(res);
-      } catch (_) {}
-      setLoading(false);
+        const { data: serverPayload } = await api.get('/admin/stats');
+        setTelemetry(serverPayload);
+      } catch (err) { console.error('Admin telemetry fetch failed'); }
+      setIsDataLoading(false);
     };
-    fetch();
+    fetchPlatformStats();
   }, []);
 
-  if (loading) return <PageLoader />;
+  if (isDataLoading) return <PageLoader />;
 
-  const { stats, recentUsers, recentJobs } = data || {};
+  const { stats, recentUsers, recentJobs } = telemetry || {};
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">{t('admin.dashboard')}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 border-b border-gray-200 dark:border-gray-700 pb-3">{t('admin.dashboard')}</h1>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         {[
-          { label: t('admin.totalUsers'), value: stats?.totalUsers, icon: UsersIcon, color: 'text-primary-600', bg: 'bg-primary-50 dark:bg-primary-900/20' },
-          { label: t('admin.totalJobs'), value: stats?.totalJobs, icon: BriefcaseIcon, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-          { label: t('admin.totalApplications'), value: stats?.totalApplications, icon: DocumentTextIcon, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-          { label: t('admin.activeJobs'), value: stats?.activeJobs, icon: CheckCircleIcon, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`card p-5 ${bg}`}>
-            <div className="flex items-center gap-3">
-              <Icon className={`w-8 h-8 ${color}`} />
+          { title: t('admin.totalUsers'), val: stats?.totalUsers, Glyph: UsersIcon, shadeText: 'text-indigo-600', shadeBg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+          { title: t('admin.totalJobs'), val: stats?.totalJobs, Glyph: BriefcaseIcon, shadeText: 'text-sky-600', shadeBg: 'bg-sky-50 dark:bg-sky-900/30' },
+          { title: t('admin.totalApplications'), val: stats?.totalApplications, Glyph: DocumentTextIcon, shadeText: 'text-fuchsia-600', shadeBg: 'bg-fuchsia-50 dark:bg-fuchsia-900/30' },
+          { title: t('admin.activeJobs'), val: stats?.activeJobs, Glyph: CheckCircleIcon, shadeText: 'text-teal-600', shadeBg: 'bg-teal-50 dark:bg-teal-900/30' },
+        ].map(({ title, val, Glyph, shadeText, shadeBg }) => (
+          <div key={title} className={`card p-6 border-l-4 ${shadeBg} border-opacity-50 border-${shadeText.split('-')[1]}-500`}>
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl bg-white dark:bg-gray-800 shadow-sm ${shadeText}`}><Glyph className="w-7 h-7" /></div>
               <div>
-                <p className={`text-2xl font-bold ${color}`}>{value ?? '—'}</p>
-                <p className="text-gray-600 dark:text-gray-400 text-xs">{label}</p>
+                <p className={`text-3xl font-black ${shadeText}`}>{val ?? '0'}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">{title}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <Link to="/admin/users" className="card p-5 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
-            <UsersIcon className="w-6 h-6 text-primary-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <Link to="/admin/users" className="card p-6 flex items-center justify-between hover:-translate-y-1 transition-transform bg-gradient-to-r from-gray-50 to-indigo-50 dark:from-gray-800 dark:to-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center"><IdentificationIcon className="w-7 h-7 text-indigo-600 dark:text-indigo-400" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-white">Platform Roster</p><p className="text-gray-500 text-sm font-medium">Manage {stats?.totalUsers || 0} registered accounts</p></div>
           </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white">Manage Users</p>
-            <p className="text-gray-500 text-sm">{stats?.totalUsers} total users</p>
-          </div>
+          <div className="w-8 h-8 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300">→</div>
         </Link>
-        <Link to="/admin/jobs" className="card p-5 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-            <BriefcaseIcon className="w-6 h-6 text-blue-600" />
+        <Link to="/admin/jobs" className="card p-6 flex items-center justify-between hover:-translate-y-1 transition-transform bg-gradient-to-r from-gray-50 to-sky-50 dark:from-gray-800 dark:to-sky-900/20 border border-sky-100 dark:border-sky-800">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-sky-100 dark:bg-sky-900/50 rounded-2xl flex items-center justify-center"><BuildingOfficeIcon className="w-7 h-7 text-sky-600 dark:text-sky-400" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-white">Opportunity Registry</p><p className="text-gray-500 text-sm font-medium">Oversee {stats?.totalJobs || 0} active listings</p></div>
           </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white">Manage Jobs</p>
-            <p className="text-gray-500 text-sm">{stats?.totalJobs} total jobs</p>
-          </div>
+          <div className="w-8 h-8 rounded-full bg-sky-200 dark:bg-sky-800 flex items-center justify-center text-sky-700 dark:text-sky-300">→</div>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Users */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Users</h2>
-          <div className="card divide-y divide-gray-200 dark:divide-gray-700">
-            {recentUsers?.map((user) => (
-              <div key={user._id} className="p-4 flex items-center justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="card border-0 shadow-sm">
+          <div className="p-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-t-2xl">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Registrations</h2>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700 p-2">
+            {recentUsers?.length ? recentUsers.map((u) => (
+              <div key={u._id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-xl transition-colors">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">{user.name}</p>
-                  <p className="text-gray-500 text-xs">{user.email}</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{u.name}</p>
+                  <p className="text-gray-500 text-xs font-medium">{u.email}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`badge text-xs ${user.role === 'employer' ? 'bg-blue-100 text-blue-700' : user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {user.role}
-                  </span>
-                  <span className={`badge text-xs ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${u.role === 'employer' ? 'bg-sky-100 text-sky-700' : u.role === 'admin' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-200 text-gray-700'}`}>{u.role}</span>
+                  <span className={`flex items-center gap-1 text-[10px] font-bold uppercase ${u.isActive ? 'text-emerald-600' : 'text-red-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />{u.isActive ? 'Authorized' : 'Suspended'}</span>
                 </div>
               </div>
-            ))}
+            )) : <p className="p-6 text-center text-gray-400 text-sm">No recent activity</p>}
           </div>
         </div>
 
-        {/* Recent Jobs */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Jobs</h2>
-          <div className="card divide-y divide-gray-200 dark:divide-gray-700">
-            {recentJobs?.map((job) => (
-              <div key={job._id} className="p-4 flex items-center justify-between">
+        <div className="card border-0 shadow-sm">
+          <div className="p-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-t-2xl">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Listings</h2>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700 p-2">
+            {recentJobs?.length ? recentJobs.map((j) => (
+              <div key={j._id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-xl transition-colors">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">{job.title}</p>
-                  <p className="text-gray-500 text-xs">{job.company} • {job.employer?.name}</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{j.title}</p>
+                  <p className="text-gray-500 text-xs font-medium">{j.company} <span className="text-gray-300 mx-1">|</span> {j.employer?.name}</p>
                 </div>
-                <span className={`badge text-xs ${job.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {job.status}
+                <span className={`px-3 py-1 text-[10px] font-bold uppercase rounded-full ${j.status === 'active' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
+                  {j.status}
                 </span>
               </div>
-            ))}
+            )) : <p className="p-6 text-center text-gray-400 text-sm">No recent activity</p>}
           </div>
         </div>
       </div>
     </div>
   );
 };
-
 export default AdminDashboard;
