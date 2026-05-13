@@ -1,40 +1,40 @@
 /**
- * Email delivery via Nodemailer.
+ * Email delivery via Brevo (HTTP API).
+ * Works perfectly on Render Free Tier and allows sending to any address.
  */
-const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for 587
-  requireTLS: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 8000, // Fail fast in 8 seconds instead of hanging
-  greetingTimeout: 8000,
-  socketTimeout: 8000,
-});
-
-const FROM_EMAIL = `"CareerBridge" <${process.env.EMAIL_USER}>`;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'praveenkupatnaik23@gmail.com';
 
 /* ── Core send function ── */
 const dispatchEmail = async (recipient, subject, htmlBody) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("EMAIL_USER or EMAIL_PASS is missing. Email skipped.");
-    throw new Error('Nodemailer credentials missing');
+  if (!BREVO_API_KEY) {
+    console.warn("BREVO_API_KEY is missing. Email skipped.");
+    throw new Error('Brevo API key missing');
   }
 
   try {
-    await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: recipient,
-      subject,
-      html: htmlBody,
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: 'CareerBridge', email: SENDER_EMAIL },
+        to: [{ email: recipient }],
+        subject: subject,
+        htmlContent: htmlBody
+      })
     });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || 'Brevo email failed');
+    }
   } catch (error) {
-    throw new Error(error.message || 'Nodemailer email failed');
+    throw new Error(error.message || 'Brevo email failed');
   }
 };
 
@@ -100,6 +100,6 @@ const sendPasswordResetEmail = async (recipient, newPassword) => {
   await dispatchEmail(recipient, 'Your New Password — CareerBridge', html);
 };
 
-console.log('✅ Email service ready (Nodemailer)');
+console.log('✅ Email service ready (Brevo)');
 
 module.exports = { dispatchEmail, sendLanguageOTP, sendSignupOTP, sendPasswordResetEmail };
