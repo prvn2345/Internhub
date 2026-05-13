@@ -1,27 +1,41 @@
 /**
- * Email delivery via Resend API.
- * Works reliably on Render free tier — no SMTP port issues.
+ * Email delivery via Nodemailer.
  */
+const nodemailer = require('nodemailer');
 
-const { Resend } = require('resend');
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for 587
+  requireTLS: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  connectionTimeout: 8000, // Fail fast in 8 seconds instead of hanging
+  greetingTimeout: 8000,
+  socketTimeout: 8000,
+});
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-
-const FROM_EMAIL = 'CareerBridge <onboarding@resend.dev>';
+const FROM_EMAIL = `"CareerBridge" <${process.env.EMAIL_USER}>`;
 
 /* ── Core send function ── */
 const dispatchEmail = async (recipient, subject, htmlBody) => {
-  if (!resend) {
-    console.warn('RESEND_API_KEY is missing. Email skipped.');
-    throw new Error('Resend API key missing');
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("EMAIL_USER or EMAIL_PASS is missing. Email skipped.");
+    throw new Error('Nodemailer credentials missing');
   }
-  const { error } = await resend.emails.send({
-    from   : FROM_EMAIL,
-    to     : [recipient],
-    subject,
-    html   : htmlBody,
-  });
-  if (error) throw new Error(error.message || 'Resend email failed');
+
+  try {
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: recipient,
+      subject,
+      html: htmlBody,
+    });
+  } catch (error) {
+    throw new Error(error.message || 'Nodemailer email failed');
+  }
 };
 
 /* ── Shared OTP template ── */
@@ -86,6 +100,6 @@ const sendPasswordResetEmail = async (recipient, newPassword) => {
   await dispatchEmail(recipient, 'Your New Password — CareerBridge', html);
 };
 
-console.log('✅ Email service ready (Resend)');
+console.log('✅ Email service ready (Nodemailer)');
 
 module.exports = { dispatchEmail, sendLanguageOTP, sendSignupOTP, sendPasswordResetEmail };
