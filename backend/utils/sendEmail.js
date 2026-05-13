@@ -1,30 +1,23 @@
 /**
- * Email delivery via Nodemailer.
+ * Email delivery via Resend API.
+ * Works reliably on Render free tier — no SMTP port issues.
  */
-const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { Resend } = require('resend');
 
-const FROM_EMAIL = `"CareerBridge" <${process.env.EMAIL_USER}>`;
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM_EMAIL = 'CareerBridge <onboarding@resend.dev>';
 
 /* ── Core send function ── */
 const dispatchEmail = async (recipient, subject, htmlBody) => {
-  try {
-    await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: recipient,
-      subject,
-      html: htmlBody,
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Nodemailer email failed');
-  }
+  const { error } = await resend.emails.send({
+    from   : FROM_EMAIL,
+    to     : [recipient],
+    subject,
+    html   : htmlBody,
+  });
+  if (error) throw new Error(error.message || 'Resend email failed');
 };
 
 /* ── Shared OTP template ── */
@@ -89,6 +82,6 @@ const sendPasswordResetEmail = async (recipient, newPassword) => {
   await dispatchEmail(recipient, 'Your New Password — CareerBridge', html);
 };
 
-console.log('✅ Email service ready (Nodemailer)');
+console.log('✅ Email service ready (Resend)');
 
 module.exports = { dispatchEmail, sendLanguageOTP, sendSignupOTP, sendPasswordResetEmail };
