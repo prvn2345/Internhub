@@ -141,19 +141,60 @@ const JobDetailPage = () => {
             </div>
           )}
 
-          {/* Skills */}
-          {job.skills?.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Skills Required</h2>
-              <div className="flex flex-wrap gap-2">
-                {job.skills.map((skill) => (
-                  <span key={skill} className="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-full text-sm font-medium">
-                    {skill}
-                  </span>
-                ))}
+          {/* Skills & Match Score */}
+          {job.skills?.length > 0 && (() => {
+            const calculateMatchScore = () => {
+              if (!user?.skills?.length) return 0;
+              const userSkillsLower = user.skills.map(s => s.toLowerCase());
+              let matches = 0;
+              job.skills.forEach(skill => {
+                if (userSkillsLower.includes(skill.toLowerCase())) matches++;
+              });
+              return Math.round((matches / job.skills.length) * 100);
+            };
+            const matchScore = calculateMatchScore();
+            
+            return (
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Skills Required</h2>
+                  {user?.role === 'student' && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${matchScore >= 70 ? 'bg-green-500' : matchScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          style={{ width: `${matchScore}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{matchScore}% Match</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.map((skill) => {
+                    const hasSkill = user?.skills?.some(s => s.toLowerCase() === skill.toLowerCase());
+                    return (
+                      <span 
+                        key={skill} 
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium border
+                          ${hasSkill 
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' 
+                            : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                          }`}
+                      >
+                        {hasSkill ? '✓ ' : ''}{skill}
+                      </span>
+                    );
+                  })}
+                </div>
+                {user?.role === 'student' && matchScore < 100 && (
+                  <p className="text-xs text-gray-500 mt-4">
+                    Update your <Link to="/profile" className="text-primary-600 hover:underline">profile skills</Link> to increase your match score.
+                  </p>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Sidebar */}

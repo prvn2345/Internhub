@@ -41,6 +41,20 @@ const StudentDashboard = () => {
     hired: applications.filter((a) => a.status === 'hired').length,
   };
 
+  const calculateATSScore = () => {
+    if (!user) return 0;
+    let score = 0;
+    if (user.profilePicture) score += 10;
+    if (user.bio && user.bio.length > 20) score += 15;
+    if (user.skills && user.skills.length > 0) score += 20;
+    if (user.skills && user.skills.length > 4) score += 10;
+    if (user.education && user.education.length > 0) score += 15;
+    if (user.experience && user.experience.length > 0) score += 15;
+    if (user.cvFileUrl || user.resumeUrl) score += 15;
+    return Math.min(100, score);
+  };
+  const atsScore = calculateATSScore();
+
   if (loading) return <PageLoader />;
 
   return (
@@ -116,44 +130,63 @@ const StudentDashboard = () => {
           )}
         </div>
 
-        {/* Profile Completion */}
+        {/* ATS Resume Score & Profile */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profile</h2>
-          <div className="card p-5">
-            <div className="flex items-center gap-3 mb-4">
-              {user?.profilePicture ? (
-                <img src={user.profilePicture} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
-              ) : (
-                <UserCircleIcon className="w-12 h-12 text-gray-300" />
-              )}
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ATS Profile Score</h2>
+          <div className="card p-5 border-t-4 border-t-primary-500 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <SparklesIcon className="w-24 h-24 text-primary-500" />
+            </div>
+            
+            <div className="flex items-center gap-4 mb-5 relative z-10">
+              <div className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 shrink-0">
+                <svg className="absolute w-full h-full transform -rotate-90">
+                  <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-200 dark:text-gray-700" />
+                  <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="6" fill="transparent" 
+                          strokeDasharray={226} strokeDashoffset={226 - (226 * atsScore) / 100} 
+                          strokeLinecap="round"
+                          className={`${atsScore > 75 ? 'text-green-500' : atsScore > 40 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} />
+                </svg>
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{atsScore}%</div>
+              </div>
               <div>
-                <p className="font-semibold text-gray-900 dark:text-white">{user?.name}</p>
-                <p className="text-gray-500 text-xs">{user?.email}</p>
+                <p className="font-semibold text-gray-900 dark:text-white text-lg">
+                  {atsScore > 75 ? 'Excellent!' : atsScore > 40 ? 'Getting There' : 'Needs Work'}
+                </p>
+                <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+                  {atsScore > 75 ? 'You have a high chance of getting shortlisted.' : 'Complete your profile to get 3x more interview calls!'}
+                </p>
               </div>
             </div>
 
             {/* Completion checklist */}
-            <div className="space-y-2 mb-4">
+            <div className="space-y-3 mb-5 relative z-10">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Missing Details</p>
               {[
-                { label: 'Profile picture', done: !!user?.profilePicture },
-                { label: 'Bio added', done: !!user?.bio },
-                { label: 'Skills added', done: user?.skills?.length > 0 },
-                { label: 'Resume uploaded', done: !!user?.resumeUrl },
-                { label: 'Education added', done: user?.education?.length > 0 },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2 text-sm">
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${item.done ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                    {item.done ? '✓' : ''}
+                { label: 'Add Profile Picture (+10%)', done: !!user?.profilePicture },
+                { label: 'Add detailed Bio (+15%)', done: !!user?.bio && user?.bio?.length > 20 },
+                { label: 'Add 5+ Core Skills (+30%)', done: user?.skills?.length > 4 },
+                { label: 'Add Education (+15%)', done: user?.education?.length > 0 },
+                { label: 'Upload Resume/CV (+15%)', done: !!user?.cvFileUrl || !!user?.resumeUrl },
+              ].filter(item => !item.done).slice(0, 3).map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 font-bold">
+                    !
                   </span>
-                  <span className={item.done ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'}>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">
                     {item.label}
                   </span>
                 </div>
               ))}
+              {atsScore === 100 && (
+                <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg flex items-center gap-2">
+                  <CheckCircleIcon className="w-5 h-5" /> All set! Your profile is fully optimized.
+                </div>
+              )}
             </div>
 
-            <Link to="/profile" className="btn-primary w-full text-center block text-sm py-2">
-              {t('profile.edit')}
+            <Link to="/profile" className="btn-primary w-full text-center block text-sm py-2 relative z-10 shadow-md">
+              Improve ATS Score
             </Link>
           </div>
         </div>
