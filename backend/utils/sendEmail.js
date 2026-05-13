@@ -5,12 +5,16 @@
 
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const FROM_EMAIL = 'CareerBridge <onboarding@resend.dev>';
 
 /* ── Core send function ── */
 const dispatchEmail = async (recipient, subject, htmlBody) => {
+  if (!resend) {
+    console.warn('RESEND_API_KEY is missing. Email skipped.');
+    throw new Error('Resend API key missing');
+  }
   const { error } = await resend.emails.send({
     from   : FROM_EMAIL,
     to     : [recipient],

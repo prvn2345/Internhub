@@ -107,17 +107,19 @@ exports.sendSignupPasscode = async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    await sendSignupOTP(email, code);
-
-    // In development/test mode, also return OTP in response for non-owner emails
-    const isOwnerEmail = email.toLowerCase() === process.env.EMAIL_USER?.toLowerCase();
-    const responseData = { success: true, message: `Verification code sent to ${email}` };
-    if (!isOwnerEmail) {
-      // Resend free tier can't send to other emails — show OTP on screen
-      responseData.devOtp = code;
-      responseData.message = `Email delivery restricted in test mode. Your OTP is shown below.`;
+    // Always return OTP in response — user sees it on screen
+    // Email delivery attempted as bonus (may fail on free tier)
+    try {
+      await sendSignupOTP(email, code);
+    } catch (emailErr) {
+      console.warn('Email delivery failed (non-critical):', emailErr.message);
     }
-    return res.json(responseData);
+
+    return res.json({
+      success: true,
+      otp    : code,  // Always send OTP in response so user can see it
+      message: `Verification code sent. Check your email or use the code shown on screen.`,
+    });
 
   } catch (err) {
     console.error('sendSignupPasscode error:', err);

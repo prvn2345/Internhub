@@ -106,6 +106,7 @@ const RegisterPage = () => {
   const [sendingOTP, setSendingOTP] = useState(false);
   const [verifyingOTP, setVerifyingOTP] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [screenOtp, setScreenOtp] = useState(''); // OTP shown on screen when email fails
 
   // Countdown timer for resend
   useEffect(() => {
@@ -130,9 +131,8 @@ const RegisterPage = () => {
       const { data } = await api.post('/auth/send-register-otp', { email: form.email });
       clearTimeout(wakeupTimer);
       toast.dismiss('wakeup');
-      if (data.devOtp) {
-        // Test mode — OTP shown on screen
-        toast.success(`Your OTP: ${data.devOtp}`, { duration: 30000 });
+      if (data.otp) {
+        toast.success(`Your OTP: ${data.otp}`, { duration: 60000, icon: '🔑' });
       } else {
         toast.success(`OTP sent to ${form.email}`);
       }
