@@ -79,6 +79,14 @@ const Navbar = () => {
             >
               Community
             </Link>
+            {user && (
+              <Link
+                to={getDashboardLink()}
+                className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
+              >
+                {t('nav.dashboard')}
+              </Link>
+            )}
             {user?.role === 'employer' && (
               <Link
                 to="/employer/post-job"
